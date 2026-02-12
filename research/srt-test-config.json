@@ -1,0 +1,12 @@
+{
+  "network": {
+    "allowLocalBinding": true,
+    "allowedDomains": [],
+    "deniedDomains": []
+  },
+  "filesystem": {
+    "denyRead": ["~/.ssh", "~/.aws", "~/.gnupg"],
+    "allowWrite": ["/Users/quartershots/Source/rlm-sandbox/research"],
+    "denyWrite": []
+  }
+}

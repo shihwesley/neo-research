@@ -1,0 +1,25 @@
+{
+  "network": {
+    "allowLocalBinding": true,
+    "allowedDomains": [],
+    "deniedDomains": []
+  },
+  "filesystem": {
+    "denyRead": [
+      "~/.ssh",
+      "~/.aws",
+      "~/.gnupg",
+      "~/.config/gh",
+      "~/.anthropic",
+      "~/.netrc"
+    ],
+    "allowWrite": [
+      "/Users/quartershots/Source/rlm-sandbox/research/srt-prototype/workspace"
+    ],
+    "denyWrite": [
+      ".env",
+      "*.pem",
+      "*.key"
+    ]
+  }
+}
