@@ -4,28 +4,30 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import httpx
-from mcp.server.mcpserver import Context
+from mcp.server.fastmcp import Context
 
-from mcp_server.docker_manager import BASE_URL, DockerManager
+from mcp_server.docker_manager import BASE_URL
+
+if TYPE_CHECKING:
+    from mcp_server.server import AppContext
 
 
-def _manager(ctx: Context) -> DockerManager:
+def _ctx(ctx: Context) -> AppContext:
     return ctx.request_context.lifespan_context
 
 
-async def _post_exec(manager: DockerManager, code: str, timeout: int = 30) -> dict:
-    """POST /exec to the sandbox container."""
-    await manager.ensure_running()
-    async with httpx.AsyncClient() as client:
-        r = await client.post(
-            f"{BASE_URL}/exec",
-            json={"code": code, "timeout": timeout},
-            timeout=timeout + 5,
-        )
-        r.raise_for_status()
-        return r.json()
+async def _post_exec(app: AppContext, code: str, timeout: int = 30) -> dict:
+    """POST /exec to the sandbox container using the shared HTTP client."""
+    await app.manager.ensure_running()
+    r = await app.http.post(
+        f"{BASE_URL}/exec",
+        json={"code": code, "timeout": timeout},
+        timeout=timeout + 5,
+    )
+    r.raise_for_status()
+    return r.json()
 
 
 def register_tools(mcp) -> None:
@@ -34,8 +36,8 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     async def rlm_exec(code: str, ctx: Context, timeout: int = 30) -> str:
         """Execute Python code in the sandbox and return output."""
-        manager = _manager(ctx)
-        data = await _post_exec(manager, code, timeout)
+        app = _ctx(ctx)
+        data = await _post_exec(app, code, timeout)
         parts = []
         if data.get("output"):
             parts.append(data["output"])
@@ -60,11 +62,10 @@ def register_tools(mcp) -> None:
         if not host_path.exists():
             return f"Error: file not found: {host_path}"
         content = host_path.read_text()
-        # Escape for Python string literal
         escaped = json.dumps(content)
         code = f"{var_name} = {escaped}"
-        manager = _manager(ctx)
-        data = await _post_exec(manager, code)
+        app = _ctx(ctx)
+        data = await _post_exec(app, code)
         if data.get("stderr"):
             return f"Error loading: {data['stderr']}"
         return f"Loaded {host_path.name} into `{var_name}` ({len(content)} chars)"
@@ -72,20 +73,19 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     async def rlm_get(name: str, ctx: Context, query: str | None = None) -> str:
         """Get a variable's value from the sandbox. Optionally run a query expression."""
-        manager = _manager(ctx)
-        await manager.ensure_running()
+        app = _ctx(ctx)
+        await app.manager.ensure_running()
 
         if query:
-            data = await _post_exec(manager, query)
+            data = await _post_exec(app, query)
             output = data.get("output", "")
             if data.get("stderr"):
                 output += f"\n[stderr] {data['stderr']}"
             return output or "(no output)"
 
-        async with httpx.AsyncClient() as client:
-            r = await client.get(f"{BASE_URL}/var/{name}", timeout=10)
-            r.raise_for_status()
-            data = r.json()
+        r = await app.http.get(f"{BASE_URL}/var/{name}", timeout=10)
+        r.raise_for_status()
+        data = r.json()
 
         if data.get("error"):
             return f"Error: {data['error']}"
@@ -94,12 +94,11 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     async def rlm_vars(ctx: Context) -> str:
         """List all variables in the sandbox."""
-        manager = _manager(ctx)
-        await manager.ensure_running()
-        async with httpx.AsyncClient() as client:
-            r = await client.get(f"{BASE_URL}/vars", timeout=10)
-            r.raise_for_status()
-            var_list = r.json()
+        app = _ctx(ctx)
+        await app.manager.ensure_running()
+        r = await app.http.get(f"{BASE_URL}/vars", timeout=10)
+        r.raise_for_status()
+        var_list = r.json()
 
         if not var_list:
             return "(no variables)"
@@ -117,8 +116,8 @@ def register_tools(mcp) -> None:
         """Run a DSPy RLM sub-agent with the given signature and inputs."""
         from mcp_server.sub_agent import run_sub_agent
 
-        manager = _manager(ctx)
-        await manager.ensure_running()
+        app = _ctx(ctx)
+        await app.manager.ensure_running()
 
         result = await run_sub_agent(
             signature=signature,
@@ -134,15 +133,15 @@ def register_tools(mcp) -> None:
         # Store results in sandbox so they're accessible via rlm.get
         if result.get("result"):
             store_code = f"_sub_agent_result = {result['result']!r}"
-            await _post_exec(manager, store_code)
+            await _post_exec(app, store_code)
 
         return json.dumps(result, indent=2, default=str)
 
     @mcp.tool()
     async def rlm_reset(ctx: Context) -> str:
         """Reset the sandbox kernel, clearing all state."""
-        manager = _manager(ctx)
-        data = await _post_exec(manager, "get_ipython().reset(new_session=True)")
+        app = _ctx(ctx)
+        data = await _post_exec(app, "get_ipython().reset(new_session=True)")
         if data.get("stderr"):
             return f"Reset with warnings: {data['stderr']}"
         return "Sandbox reset."

@@ -104,10 +104,27 @@
   - .gitignore (fixed __pycache__ pattern)
 
 ### Phase 2, Sprint 1: Persistence + Claude Integration (parallel)
-- **Status:** ready (blocked by Phase 1, all decisions resolved)
-- **Started:** --
+- **Status:** completed
+- **Started:** 2026-02-12
+- **Completed:** 2026-02-12
+- **Tests:** 77/77 passed (35 new + 42 existing, zero regressions)
+- **Commit:** d1ad217 (merge: 5bc3ab0)
+- **Review:** 3 P0/P1 issues found and fixed (atomic writes, sed escaping, backup-before-merge)
 - Actions taken:
+  - session-persistence: dill-based /snapshot/save and /snapshot/restore endpoints, SessionManager with 5-min auto-save, lifespan hooks
+  - claude-integration: mcp-config.json, routing rules, setup.sh installer, README with 3-tier isolation docs
+  - Resolved merge conflict with in-flight FastMCP refactor (MCPServer → FastMCP + AppContext)
 - Files created/modified:
+  - sandbox/server.py (modified — snapshot endpoints)
+  - mcp_server/session.py (created — SessionManager)
+  - mcp_server/server.py (modified — lifespan wiring + FastMCP migration)
+  - mcp_server/tools.py (modified — AppContext/shared httpx client refactor)
+  - claude-integration/mcp-config.json (created)
+  - claude-integration/rlm-routing-rules.md (created)
+  - claude-integration/setup.sh (created)
+  - README.md (created)
+  - tests/test_persistence.py (created — 7 tests)
+  - tests/test_integration.py (created — 28 tests)
 
 ## Test Results
 | Test | Expected | Actual | Status |
