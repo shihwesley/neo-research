@@ -14,7 +14,7 @@
       "~/.netrc"
     ],
     "allowWrite": [
-      "/Users/quartershots/Source/rlm-sandbox/research/srt-prototype/workspace"
+      "./workspace"
     ],
     "denyWrite": [
       ".env",

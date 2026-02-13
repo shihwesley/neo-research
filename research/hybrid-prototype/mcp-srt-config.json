@@ -13,7 +13,7 @@
       "~/.netrc"
     ],
     "allowWrite": [
-      "/Users/quartershots/.rlm-sandbox"
+      "~/.rlm-sandbox"
     ],
     "denyWrite": [
       ".env",

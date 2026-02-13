@@ -6,7 +6,7 @@
   },
   "filesystem": {
     "denyRead": ["~/.ssh", "~/.aws", "~/.gnupg"],
-    "allowWrite": ["/Users/quartershots/Source/rlm-sandbox/research"],
+    "allowWrite": ["./research"],
     "denyWrite": []
   }
 }

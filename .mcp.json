@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "rlm-sandbox": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/start-server.sh",
+      "env": {
+        "RLM_PLUGIN_ROOT": "${CLAUDE_PLUGIN_ROOT}",
+        "RLM_KNOWLEDGE_DIR": "~/.rlm-sandbox/knowledge"
+      }
+    }
+  }
+}

@@ -80,7 +80,7 @@ assert_contains "division error" "$R" "ZeroDivisionError"
 
 # Test 6: file write to workspace (allowed)
 echo "Test 6: File write to allowed workspace"
-R=$(post "/exec" '{"code": "open(\"/Users/quartershots/Source/rlm-sandbox/research/srt-prototype/workspace/test.txt\", \"w\").write(\"hello\")"}')
+R=$(post "/exec" "{\"code\": \"open(\\\"$SCRIPT_DIR/workspace/test.txt\\\", \\\"w\\\").write(\\\"hello\\\")\"}")
 assert_contains "write ok" "$R" '"output"'
 
 # Test 7: file write outside workspace (blocked by srt)

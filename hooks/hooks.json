@@ -1,0 +1,17 @@
+{
+  "description": "rlm-sandbox hooks: Context7 routing and knowledge store prompts",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__context7__query-docs",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/context7-to-mv2.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

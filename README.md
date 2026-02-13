@@ -1,110 +1,295 @@
 # rlm-sandbox
 
-A Docker sandbox for running Python and DSPy code in isolated containers, exposed to Claude Code through an MCP server.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-209%20passing-brightgreen.svg)]()
+[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2.svg)]()
 
-Claude sends code via MCP tools. The MCP server (running on the host) forwards it to a FastAPI + IPython kernel inside a Docker container. Results come back the same way. DSPy optimization runs host-side so API keys never enter the container.
+Sandboxed Python execution + zero-context doc search for Claude Code. Run code in Docker without leaking API keys, search indexed documentation without reading files into the context window.
+
+```
+> Use rlm_search("async lifespan pattern") to find how FastAPI handles startup
+
+Found 3 results:
+  1. [0.89] fastapi/advanced/events.md — "Use the lifespan parameter..."
+  2. [0.82] fastapi/tutorial/dependencies.md — "Dependencies with yield..."
+  3. [0.71] fastapi/deployment/concepts.md — "Startup and shutdown events..."
+```
+
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Install](#install)
+- [Quick Start](#quick-start)
+- [Tools](#tools-16-total)
+- [Knowledge Store](#knowledge-store)
+- [Sandbox](#sandbox)
+- [Configuration](#configuration)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Features
+
+- **Sandboxed execution** — IPython kernel in Docker (no network, no API keys, 2GB memory cap)
+- **DSPy sub-agents** — run recursive language model programs via Haiku 4.5, host-side
+- **Hybrid doc search** — BM25 + vector search over `.mv2` files, ~5ms query latency
+- **Doc fetching** — grab URLs, sitemaps, or local files into dual storage (raw markdown + search index)
+- **One-call research** — `rlm_research("fastapi")` finds docs, fetches, indexes, done
+- **Session persistence** — sandbox state survives MCP server restarts via dill snapshots
+- **Plugin distribution** — installs as a Claude Code plugin with agents, skills, and hooks included
 
 ## Architecture
 
+```mermaid
+graph TB
+    CC[Claude Code] -->|stdio / MCP protocol| MCP
+
+    subgraph HOST["Host Process"]
+        MCP[MCP Server]
+        MCP --> TOOLS[Sandbox Tools]
+        MCP --> KS[Knowledge Store]
+        MCP --> FETCH[Doc Fetcher]
+        MCP --> RES[Research Engine]
+
+        DSPY[DSPy / Haiku 4.5] -.->|host-side inference| TOOLS
+        FETCH -->|dual storage| KS
+        RES -->|resolves + fetches| FETCH
+    end
+
+    TOOLS -->|HTTP| DOCKER
+
+    subgraph DOCKER["Docker Container"]
+        API[FastAPI]
+        API --> IPY[IPython Kernel]
+    end
+
+    subgraph STORAGE["Persistent Storage"]
+        MV2[".mv2 knowledge index"]
+        RAW[".claude/docs/ raw files"]
+        SNAP["~/.rlm-sandbox/ snapshots"]
+    end
+
+    KS -->|read/write| MV2
+    FETCH -->|write| RAW
+    TOOLS -.->|session save| SNAP
+
+    style DOCKER fill:#2d1b69,stroke:#8b5cf6,color:#fff
+    style HOST fill:#1e293b,stroke:#64748b,color:#fff
+    style STORAGE fill:#1a2e1a,stroke:#4ade80,color:#fff
+    style CC fill:#7c3aed,stroke:#a78bfa,color:#fff
 ```
-Claude Code
-    |
-    | stdio (MCP protocol)
-    v
-MCP Server (host process)
-    |                \
-    | HTTP             DSPy (host-side, talks to Haiku 4.5)
-    v
-Docker Container
-    FastAPI + IPython kernel
-    (no network, no API keys)
+
+## Install
+
+### From the Plugin Marketplace (recommended)
+
+Inside Claude Code, open the marketplace and install:
+
+```
+/plugin marketplace
 ```
 
-The MCP server is defined in `mcp_server/server.py`. The container runs `sandbox/server.py` (FastAPI) backed by `sandbox/repl.py` (IPython kernel).
+Search for **rlm-sandbox** and install it. Done — first run auto-creates a Python venv and installs all dependencies.
 
-## Isolation Tiers
+### From GitHub
 
-The sandbox supports three levels of isolation depending on your environment:
+```bash
+claude plugin install github:quartershots/rlm-sandbox
+```
 
-**Tier 1 — Process isolation (`--no-docker`)**
-Falls back to running the IPython kernel as a local subprocess. No Docker required. Startup is around 200ms. The `srt-config.json` file restricts filesystem access (denies `~/.ssh`, `~/.aws`, `~/.config/gcloud`). Good for quick iteration when you trust the code being executed.
+### From a Local Clone
 
-**Tier 2 — Docker container (default)**
-Runs the kernel inside a Docker container with null DNS (no outbound network), 2GB memory limit, and 2 CPU cap. Startup takes about 4 seconds. The container gets no API keys and no access to the host filesystem beyond the `./workspace` mount. This is the recommended mode.
+```bash
+git clone https://github.com/quartershots/rlm-sandbox.git
+claude plugin install ./rlm-sandbox
+```
 
-**Tier 3 — Docker Sandboxes (future)**
-Full Docker Desktop sandbox deployment with stronger isolation guarantees. Not yet implemented — requires a Docker Desktop version that supports the Sandboxes API.
+Docker is optional — knowledge tools work without it, sandbox tools need it.
 
-When Docker is unavailable the MCP server automatically drops to Tier 1. The `srt-config.json` deny rules apply at every tier as defense-in-depth.
+<details>
+<summary>Manual setup (without plugin install)</summary>
+
+```bash
+git clone https://github.com/quartershots/rlm-sandbox.git
+cd rlm-sandbox
+./scripts/setup.sh
+
+# Start MCP server directly (stdio transport)
+./scripts/start-server.sh
+
+# Optional: build Docker sandbox image
+docker compose up -d --build
+```
+
+</details>
 
 ## Quick Start
 
-**Prerequisites:** Python 3.12+, Docker (optional but recommended)
+After installing, restart Claude Code. The `rlm-sandbox` MCP server appears with 16 tools.
 
-```bash
-# Clone and install dependencies
-pip install -r mcp_server/requirements.txt
+**Index some docs and search them:**
 
-# Run the automated setup
-bash claude-integration/setup.sh
+```
+> /rlm-sandbox:research fastapi
 
-# Restart Claude Code to pick up the new MCP server
+Indexed 47 pages for 'fastapi'. Use rlm_search to query.
+
+> Use rlm_search("dependency injection") to find the pattern
+
+Found 5 results:
+  1. [0.94] tutorial/dependencies.md — "Declare the dependency..."
+  2. [0.88] advanced/dependencies.md — "Sub-dependencies are resolved..."
 ```
 
-After setup, the `rlm` MCP server appears in Claude Code's tool list. Try it:
+**Run code in the sandbox:**
 
-> "Use rlm_exec to calculate the first 20 Fibonacci numbers"
+```
+> Use rlm_exec to calculate the first 10 primes
 
-To start the sandbox manually (for development or testing):
-
-```bash
-docker compose up -d --build    # Tier 2: Docker
-# or
-uvicorn sandbox.server:app --host 127.0.0.1 --port 8080  # Tier 1: bare
+Output:
+[2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
 ```
 
-## Tool Reference
+**Run a DSPy sub-agent:**
 
-| Tool | Description |
+```
+> Use rlm_sub_agent with signature "question -> answer" and input "What is the capital of France?"
+
+Result: {"answer": "Paris"}
+```
+
+## Tools (16 total)
+
+### Sandbox (requires Docker)
+
+| Tool | What it does |
 |------|-------------|
-| `rlm_exec(code, timeout=30)` | Execute Python code in the sandbox. Returns stdout/stderr. |
-| `rlm_load(path, var_name)` | Read a host file and inject its content into a sandbox variable. Denies access to `~/.ssh`, `~/.aws`, `~/.config/gcloud`, `~/.gnupg`. |
-| `rlm_get(name, query=None)` | Retrieve a sandbox variable by name. If `query` is provided, evaluates it as a Python expression in the sandbox instead. |
-| `rlm_vars()` | List all variables currently in the sandbox with types and value summaries. |
-| `rlm_sub_agent(signature, inputs)` | Run a DSPy sub-agent with the given signature (e.g., `"question -> answer"`) and inputs dict. Results are stored in the sandbox as `_sub_agent_result`. |
-| `rlm_reset()` | Clear all sandbox state (variables, imports, history). |
+| `rlm_exec(code)` | Execute Python, return stdout/stderr |
+| `rlm_load(path, var_name)` | Load a host file into a sandbox variable |
+| `rlm_get(name)` | Get a variable or evaluate an expression |
+| `rlm_vars()` | List all sandbox variables |
+| `rlm_sub_agent(signature, inputs)` | Run a DSPy sub-agent (Haiku 4.5) |
+| `rlm_reset()` | Clear all sandbox state |
 
-## Project Layout
+### Knowledge Store (no Docker needed)
 
+| Tool | What it does |
+|------|-------------|
+| `rlm_search(query, top_k, mode)` | Hybrid search (BM25 + vector) over indexed docs |
+| `rlm_ask(question, context_only)` | RAG Q&A or context-only chunk retrieval |
+| `rlm_timeline(since, until)` | Browse docs by recency |
+| `rlm_ingest(title, text)` | Manually add content to the index |
+
+### Fetching (no Docker needed)
+
+| Tool | What it does |
+|------|-------------|
+| `rlm_fetch(url)` | Fetch URL → raw .md file + .mv2 index |
+| `rlm_load_dir(glob)` | Bulk-load local files into both stores |
+| `rlm_fetch_sitemap(url)` | Fetch all pages from a sitemap |
+
+### Research & Management (no Docker needed)
+
+| Tool | What it does |
+|------|-------------|
+| `rlm_research(topic)` | Find docs, fetch, index, confirm |
+| `rlm_knowledge_status()` | Show indexed sources and sizes |
+| `rlm_knowledge_clear()` | Wipe the .mv2 index |
+
+## Knowledge Store
+
+```mermaid
+graph LR
+    subgraph INGEST["Ingestion"]
+        URL[rlm_fetch URL]
+        SITE[rlm_fetch_sitemap]
+        DIR[rlm_load_dir]
+        TOPIC[rlm_research topic]
+    end
+
+    subgraph PROCESS["Processing"]
+        MD[HTML → Markdown]
+        EMB["Embed (MiniLM-L6)"]
+    end
+
+    subgraph STORE[".mv2 File — 5 Indexes"]
+        LEX["Lexical (BM25)"]
+        VEC["Vector (HNSW)"]
+        SIM["SimHash"]
+        TIME["Time (B-tree)"]
+        MESH["Logic Mesh"]
+    end
+
+    subgraph QUERY["Retrieval"]
+        SEARCH[rlm_search]
+        ASK[rlm_ask]
+        TL[rlm_timeline]
+    end
+
+    URL --> MD
+    SITE --> MD
+    DIR --> EMB
+    TOPIC -.->|finds + fetches| URL
+
+    MD --> EMB
+    EMB --> STORE
+
+    STORE --> SEARCH
+    STORE --> ASK
+    STORE --> TL
+
+    style INGEST fill:#1e3a5f,stroke:#60a5fa,color:#fff
+    style PROCESS fill:#3b1f5e,stroke:#a78bfa,color:#fff
+    style STORE fill:#1a2e1a,stroke:#4ade80,color:#fff
+    style QUERY fill:#5f1e1e,stroke:#f87171,color:#fff
 ```
-mcp_server/          MCP server (runs on host)
-  server.py          Entry point — stdio transport
-  tools.py           Tool definitions (rlm_exec, rlm_load, etc.)
-  docker_manager.py  Container lifecycle, health checks, fallback to bare mode
-  sub_agent.py       DSPy sub-agent runner
-  signatures.py      DSPy signature definitions
-  srt-config.json    Filesystem deny rules (defense-in-depth)
-sandbox/             Container payload
-  server.py          FastAPI app with /exec, /var, /vars, /health
-  repl.py            IPython kernel wrapper
-claude-integration/  Claude Code setup files
-  mcp-config.json    MCP server registration (has PROJECT_DIR placeholder)
-  rlm-routing-rules.md  When to use sandbox vs. built-in tools
-  setup.sh           Installer script
-tests/               pytest test suite
-workspace/           Mounted into container at /workspace
-```
 
-## Running Tests
+Each project gets one `.mv2` file at `~/.rlm-sandbox/knowledge/{project-hash}.mv2`. Five concurrent indexes in a single portable file — no sidecars, no lock files.
+
+Embeddings use all-MiniLM-L6-v2 (384d, ~50MB model). No API keys, no external services. Falls back to lexical-only if sentence-transformers isn't installed.
+
+The point: agents call `rlm_search` instead of reading entire doc files into context. A search returns ranked chunks in ~5ms. A full file read costs hundreds of tokens and fills the context window.
+
+## Sandbox
+
+Three isolation tiers:
+
+| Tier | Method | Startup | When to use |
+|------|--------|---------|-------------|
+| 1 | Local subprocess | ~200ms | Quick iteration, trusted code |
+| 2 | Docker container | ~4s | Default. No network, 2GB cap |
+| 3 | Docker Sandboxes | TBD | Future — stronger isolation |
+
+The container gets null DNS (no outbound network), no API keys, and no host filesystem access beyond `./workspace`. DSPy runs host-side so the container stays lean.
+
+## Configuration
+
+The plugin includes two custom agents and two skills:
+
+| Component | Name | Purpose |
+|-----------|------|---------|
+| Agent | `rlm-researcher` | Delegates research tasks (fetch + index docs) |
+| Agent | `rlm-sandbox` | Delegates code execution tasks |
+| Skill | `/rlm-sandbox:research <topic>` | Manual research trigger |
+| Skill | `/rlm-sandbox:knowledge-status` | Check what's indexed |
+
+A PostToolUse hook on `mcp__context7__query-docs` nudges Claude to also index Context7 results into the knowledge store.
+
+## Contributing
+
+Bug reports and PRs welcome.
 
 ```bash
-# Unit/smoke tests (no Docker needed)
-pytest tests/test_integration.py
+# Run the full test suite (209 tests)
+pytest tests/ -v
 
-# Full integration tests (requires Docker)
-pytest tests/test_mcp_server.py tests/test_sandbox.py
+# Knowledge/fetcher/research only (no Docker)
+pytest tests/test_knowledge.py tests/test_fetcher.py tests/test_research.py
+
+# Integration tests (requires Docker)
+pytest tests/test_sandbox.py tests/test_mcp_server.py
 ```
 
-## `/sandbox` Compatibility Note
+## License
 
-Claude Code has a built-in `/sandbox` command that runs code in its own sandbox environment. `rlm-sandbox` is a separate system — it provides a persistent IPython kernel with variable state across calls, DSPy sub-agent support, and file loading from the host. Both can coexist. The routing rules in `.claude/rlm-routing-rules.md` tell Claude when to prefer one over the other.
+[MIT](LICENSE)

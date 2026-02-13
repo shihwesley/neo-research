@@ -180,22 +180,39 @@ hosting method (Docker, srt, bare process) remains transparent to DSPy.
 | srt-only as --no-docker fallback | 200ms startup, no Docker dep — tested, 15/15 pass |
 | --dns 0.0.0.0 over --network=none | Port mapping needs bridge network; --dns blocks DNS resolution |
 | Three-tier isolation model | Tier 1 (srt), Tier 2 (Docker+srt), Tier 3 (Docker Sandboxes) — users pick |
-| FAISS+fastembed over memvid-sdk | memvid 0/5 NL recall, no local vec on macOS ARM64; FAISS 5/5 recall, 2.4ms latency |
-| Search engine runs host-side | 1.1GB peak RAM too tight for 2GB container; model download needs network; matches DSPy pattern |
-| BGE-small-en-v1.5 (384d) | Good enough quality (3/5 rank-1 perfect), fast embedding (51 chunks/s), small model (~50MB) |
-| IndexFlatIP for initial impl | HNSW unnecessary at <10K vectors; FlatIP is simpler and equally fast at our scale |
+| ~~FAISS+fastembed over memvid-sdk~~ **REVERSED** | See addendum below — memvid v2 SDK has working vec, hybrid search, and local embeddings |
+| Search engine runs host-side | Heavy compute stays on host; container stays lean; matches DSPy pattern |
+| **memvid-sdk as knowledge store** | Single .mv2 file replaces FAISS index + metadata sidecar. Built-in BM25 + vec + hybrid + adaptive retrieval |
+| **Dual storage (raw + .mv2)** | Raw .md files for TLDR cache (93% token savings), .mv2 for semantic search without context consumption |
+| **Local embeddings via fastembed-python** | BGE-small-en-v1.5 (384d, ~50MB model), pip install only. Ollama (1024d) as upgrade path. No API keys, no services |
 
 ### Knowledge Store Search Decision (2026-02-12, Phase 3 Spike)
 
-**We chose FAISS + fastembed (BGE-small-en-v1.5) because memvid-sdk can't do semantic search on our platform.**
+**~~We chose FAISS + fastembed~~ REVERSED 2026-02-13: We are committing to memvid-sdk.**
 
-Prototyped both approaches against the same 15-file corpus (52KB, 137 chunks) with 5 natural language queries.
+Original spike (2026-02-12) tested memvid-sdk v2.0.156 and found issues: BM25 parser choked on stop words, vec feature compiled out of macOS ARM64 wheel, broken Python SDK imports. FAISS+fastembed worked at that time.
 
-memvid-sdk failed hard: Tantivy's BM25 parser chokes on stop words, returning 0 results for all 5 natural language queries. The vec feature (HNSW + ONNX embeddings) is compiled out of the macOS ARM64 wheel — the only alternative is OpenAI embeddings, which requires API keys we won't put in the container. The Python SDK also had multiple API breaking issues in v2.0.156 (wrong module name, missing methods, broken commit).
+**Reversal rationale (2026-02-13):**
+- Full memvid v2 docs now fetched and stored locally (89 pages at .claude/docs/memvid/)
+- Current docs show: built-in fastembed BGE-small works on macOS (Python/ONNX, not compiled Rust), Ollama embeddings as upgrade path, hybrid search (BM25 + vec + reranker), adaptive retrieval, timeline queries
+- memvid provides: single .mv2 file (no index + sidecar), crash-safe WAL, incremental indexing, entity extraction, session replay, deduplication — far more than FAISS alone
+- The spike likely tested a broken wheel; the underlying architecture supports macOS ARM64 via fastembed (ONNX Runtime)
+- User decision: commit to memvid, use its full feature set (lex, vec, time, entity extraction)
 
-FAISS+fastembed worked out of the box: 5/5 queries returned relevant results, 2.4ms average latency, clean Python 3.14 install. Peak RAM is 1.1GB — too tight for the 2GB container, but fine host-side in the MCP server process. This mirrors the DSPy hosting decision: heavy compute stays on the host, container stays lean.
+**Smoke test results (2026-02-13):**
+- fastembed compiled out of ARM64 wheel (confirmed) — `put(enable_embedding=True)` fails with EmbeddingFailedError
+- Ollama + mxbai-embed-large (1024d) works perfectly via `put_many(docs, embedder=OllamaEmbeddings(...))`
+- Semantic search: "how do I build a REST API?" → FastAPI ranked #1 (0.59 score), 5/5 hits
+- Hybrid search: "Python testing framework" → pytest ranked #1 (0.60 score)
+- BM25 (lex): keyword queries work, NL queries return 0 (expected — BM25 is keyword-based)
+- `ask()` has TimeIndexMissingError on newly created files (SDK bug, workaround: skip ask for now, use find)
+- API pattern: `put_many()` accepts custom `embedder=` param; `put()` only uses built-in fastembed (broken on ARM64)
+- **Follow-up discovery:** fastembed-python (`pip install fastembed`) works as a custom embedder via `put_many(docs, embedder=FastembedEmbeddings())`
+- fastembed-python uses ONNX Runtime (has ARM64 support), same BGE-small model, 384d, 2-4ms search, 0.6s ingest for 5 docs
+- This is different from memvid's Rust-compiled fastembed — Python package works, Rust feature doesn't
+- Conclusion: **fastembed-python is the default embedding path**. No Ollama needed. Ollama is upgrade path for 1024d quality.
 
-Hosting model: **host-side** (MCP server process). Container has no network for model download, limited memory, and we'd need separate indexes per container. One host-side index serves all sessions.
+Hosting model: **host-side** (unchanged). Container has no network for model download.
 
 Full benchmark data: `research/knowledge-spike/benchmark_results.md`
 
