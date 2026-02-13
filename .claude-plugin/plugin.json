@@ -3,11 +3,11 @@
   "description": "Sandboxed Python execution and zero-context doc search for Claude Code. Runs code in Docker containers with no network access or API key exposure. Indexes documentation into memvid .mv2 files for hybrid BM25+vector search at ~5ms latency. Includes DSPy sub-agent support via Haiku 4.5, session persistence via dill snapshots, one-call research automation, and Context7 integration. Ships 16 MCP tools across four categories: sandbox execution, knowledge store, doc fetching, and research management.",
   "version": "1.0.0",
   "author": {
-    "name": "quartershots",
-    "email": "quartershots@users.noreply.github.com"
+    "name": "shihwesley",
+    "email": "shihwesley@users.noreply.github.com"
   },
-  "homepage": "https://github.com/quartershots/rlm-sandbox",
-  "repository": "https://github.com/quartershots/rlm-sandbox",
+  "homepage": "https://github.com/shihwesley/rlm-sandbox",
+  "repository": "https://github.com/shihwesley/rlm-sandbox",
   "license": "MIT",
   "keywords": [
     "sandbox",

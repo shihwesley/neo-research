@@ -94,13 +94,13 @@ Search for **rlm-sandbox** and install it. Done — first run auto-creates a Pyt
 ### From GitHub
 
 ```bash
-claude plugin install github:quartershots/rlm-sandbox
+claude plugin install github:shihwesley/rlm-sandbox
 ```
 
 ### From a Local Clone
 
 ```bash
-git clone https://github.com/quartershots/rlm-sandbox.git
+git clone https://github.com/shihwesley/rlm-sandbox.git
 claude plugin install ./rlm-sandbox
 ```
 
@@ -110,7 +110,7 @@ Docker is optional — knowledge tools work without it, sandbox tools need it.
 <summary>Manual setup (without plugin install)</summary>
 
 ```bash
-git clone https://github.com/quartershots/rlm-sandbox.git
+git clone https://github.com/shihwesley/rlm-sandbox.git
 cd rlm-sandbox
 ./scripts/setup.sh
 
