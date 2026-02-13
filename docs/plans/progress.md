@@ -191,18 +191,27 @@
   - tests/test_fetcher.py (created, 649 lines, 50 tests)
 
 ### Phase 4, Sprint 2: Orchestrator Integration
-- **Status:** draft (blocked by Phase 4, Sprint 1)
-- **Started:** --
+- **Status:** completed
+- **Started:** 2026-02-13
+- **Completed:** 2026-02-13
+- **Tests:** 209/209 passed (35 new)
+- **Commit:** 8c3c675
 - Actions taken:
-  - Rewrote orchestrator-integration-spec.md (rlm_research, knowledge_status, agent prompts)
+  - Implemented rlm_research compound tool (topic → find docs → fetch → index)
+  - Implemented rlm_knowledge_status (store path, size, per-library breakdown)
+  - Implemented rlm_knowledge_clear (close, delete .mv2, reset cache)
+  - Wired register_research_tools into server.py
+  - REQ-1, REQ-2, REQ-4 deferred to skill file updates (workflow-level, not code)
 - Files created/modified:
-  - docs/plans/specs/orchestrator-integration-spec.md (rewritten)
+  - mcp_server/research.py (created, 315 lines)
+  - mcp_server/server.py (modified — import + register_research_tools)
+  - tests/test_research.py (created, 657 lines, 35 tests)
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phases 0-3 complete. Phase 4 specs rewritten for memvid. Ready to implement |
-| Where am I going? | 3 specs: search-engine + doc-fetcher (parallel), then orchestrator-integration |
+| Where am I? | All 10 specs complete. Full plan implemented. |
+| Where am I going? | Done. 10 MCP tools, 209 tests, knowledge store operational. |
 | What's the goal? | Memvid knowledge store: fetch docs into .mv2, hybrid search, zero context cost |
-| What have I learned? | memvid v2 has local fastembed (BGE-small), Ollama embeddings, hybrid search, adaptive retrieval. Spike's issues were likely a broken wheel |
-| What have I done? | Core sandbox (77 tests) + search spike complete. Reversed to memvid, rewrote all Phase 4 specs |
+| What have I learned? | Built-in fastembed broken — use get_embedder("huggingface") with put_many(). Parallel agents work well when specs have clean module boundaries. |
+| What have I done? | Complete MCP server: sandbox (Docker+IPython), DSPy sub-agents, session persistence, knowledge store (memvid .mv2), doc fetcher, research tools. 209 tests. |

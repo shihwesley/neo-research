@@ -39,7 +39,7 @@ graph TD
 | 3 | 1 | search-spike | completed | -- |
 | 4 | 1 | doc-fetcher | completed | search-spike |
 | 4 | 1 | search-engine | completed | search-spike |
-| 4 | 2 | orchestrator-integration | draft | doc-fetcher, search-engine |
+| 4 | 2 | orchestrator-integration | completed | doc-fetcher, search-engine |
 
 **Note (2026-02-13):** Phase 4 specs rewritten to use memvid-sdk instead of FAISS+fastembed. Decision reversal documented in findings.md.
 
