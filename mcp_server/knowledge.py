@@ -10,7 +10,6 @@ import hashlib
 import json
 import logging
 import os
-import time
 from typing import Any
 
 from mcp.server.fastmcp import Context
@@ -110,14 +109,15 @@ class KnowledgeStore:
     ) -> list:
         """Batch-ingest documents. Each dict needs at least 'title' and 'text'."""
         self._ensure_open()
-        prepared = []
-        for d in docs:
-            prepared.append({
+        prepared = [
+            {
                 "title": d["title"],
                 "label": d.get("label", "kb"),
                 "text": d["text"],
                 "metadata": d.get("metadata", {}),
-            })
+            }
+            for d in docs
+        ]
         frame_ids = self.mem.put_many(prepared, embedder=self.embedder)
         self.mem.commit()
         return frame_ids

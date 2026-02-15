@@ -11,17 +11,14 @@ import hashlib
 import json
 import logging
 import re
-import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import urlparse
 from xml.etree import ElementTree
 
 import httpx
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import Context
+from mcp.server.fastmcp import Context
 
 log = logging.getLogger(__name__)
 
@@ -315,8 +312,6 @@ def register_fetcher_tools(mcp) -> None:
         Tries .md variant first (Mintlify convention), falls back to HTML->markdown.
         Cached files younger than 7 days are returned without re-fetching unless force=True.
         """
-        from mcp.server.fastmcp import Context as _Ctx  # noqa: avoid circular at module level
-
         app = ctx.request_context.lifespan_context
         result = await fetch_url(app.http, url, force=force)
 

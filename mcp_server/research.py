@@ -85,6 +85,21 @@ def _resolve_doc_urls(topic: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def _try_ingest(store: KnowledgeStore | None, url: str, result: dict[str, Any]) -> None:
+    """Ingest fetched content into the knowledge store, if available."""
+    if store is None or not result.get("content"):
+        return
+    try:
+        store.ingest(
+            title=url,
+            text=result["content"],
+            label=extract_library_name(url),
+            metadata=result.get("meta") or {},
+        )
+    except Exception as exc:
+        log.warning("Ingest failed for %s: %s", url, exc)
+
+
 async def _fetch_sitemap(
     http_client: Any,
     sitemap_url: str,
@@ -106,7 +121,6 @@ async def _fetch_sitemap(
     if not urls:
         return {"fetched": 0, "failed": 0}
 
-    library = extract_library_name(sitemap_url)
     fetched = 0
     failed = 0
 
@@ -116,17 +130,7 @@ async def _fetch_sitemap(
             failed += 1
         else:
             fetched += 1
-            # Ingest into knowledge store if available
-            if store is not None and result.get("content"):
-                try:
-                    store.ingest(
-                        title=page_url,
-                        text=result["content"],
-                        label=library,
-                        metadata=result.get("meta") or {},
-                    )
-                except Exception as exc:
-                    log.warning("Ingest failed for %s: %s", page_url, exc)
+            _try_ingest(store, page_url, result)
 
         await asyncio.sleep(0.1)  # rate limit
 
@@ -145,18 +149,7 @@ async def _fetch_single(
     if result.get("error"):
         return {"ok": False, "error": result["error"]}
 
-    if store is not None and result.get("content"):
-        library = extract_library_name(url)
-        try:
-            store.ingest(
-                title=url,
-                text=result["content"],
-                label=library,
-                metadata=result.get("meta") or {},
-            )
-        except Exception as exc:
-            log.warning("Ingest failed for %s: %s", url, exc)
-
+    _try_ingest(store, url, result)
     return {"ok": True, "error": None}
 
 
@@ -165,14 +158,10 @@ async def _fetch_single(
 # ---------------------------------------------------------------------------
 
 
-def _ctx(ctx: Context) -> Any:
-    return ctx.request_context.lifespan_context
-
-
 def _get_store_from_ctx(ctx: Context) -> KnowledgeStore | None:
     """Pull the KnowledgeStore from the app context, if wired."""
     try:
-        app = _ctx(ctx)
+        app = ctx.request_context.lifespan_context
         return getattr(app, "knowledge_store", None)
     except Exception:
         return None
@@ -210,7 +199,7 @@ def register_research_tools(mcp) -> None:
         Args:
             topic: Library or topic name (e.g. "fastapi", "dspy", "memvid")
         """
-        app = _ctx(ctx)
+        app = ctx.request_context.lifespan_context
         store = _get_store_from_ctx(ctx)
 
         doc_urls = _resolve_doc_urls(topic)
