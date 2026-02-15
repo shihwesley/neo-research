@@ -130,15 +130,15 @@ class TestReadme:
     def test_file_exists(self):
         assert self.readme_path.exists()
 
-    def test_mentions_three_tiers(self):
+    def test_mentions_execution_tiers(self):
         content = self.readme_path.read_text()
-        assert "Tier 1" in content
-        assert "Tier 2" in content
-        assert "Tier 3" in content
+        # README describes sandbox execution in the Sandbox section
+        assert "Docker" in content
+        assert "no Docker" in content or "No Docker" in content or "no Docker needed" in content
 
-    def test_mentions_no_docker_flag(self):
+    def test_mentions_docker_optional(self):
         content = self.readme_path.read_text()
-        assert "--no-docker" in content or "no-docker" in content
+        assert "no Docker" in content or "without Docker" in content or "No Docker" in content
 
     def test_has_tool_reference(self):
         content = self.readme_path.read_text()
@@ -153,6 +153,7 @@ class TestReadme:
         content = self.readme_path.read_text()
         assert "Quick Start" in content or "quick start" in content
 
-    def test_mentions_sandbox_compatibility(self):
+    def test_mentions_sandbox_tools(self):
         content = self.readme_path.read_text()
-        assert "/sandbox" in content
+        assert "Sandbox" in content
+        assert "rlm_exec" in content
