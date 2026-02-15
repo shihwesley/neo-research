@@ -80,19 +80,22 @@ class SandboxInterpreter:
 async def inject_llm_stub(client: httpx.AsyncClient, callback_url: str) -> None:
     """Inject llm_query() stub into container that POSTs to host.
 
-    The stub uses 'requests' (available in the container) to call back to the
-    host-side callback endpoint. This keeps API keys out of the container.
+    Uses urllib.request (stdlib, always available) to call back to the
+    host-side callback endpoint. API keys never enter the container.
     """
     stub_code = (
-        "import requests as _llm_requests\n"
+        "import urllib.request as _llm_urllib\n"
+        "import json as _llm_json\n"
         "def llm_query(prompt):\n"
-        "    _resp = _llm_requests.post(\n"
+        "    _data = _llm_json.dumps({'prompt': prompt}).encode()\n"
+        "    _req = _llm_urllib.Request(\n"
         f'        "{callback_url}",\n'
-        '        json={"prompt": prompt},\n'
-        "        timeout=120,\n"
+        "        data=_data,\n"
+        "        headers={'Content-Type': 'application/json'},\n"
+        "        method='POST',\n"
         "    )\n"
-        "    _resp.raise_for_status()\n"
-        '    return _resp.json()["result"]\n'
+        "    with _llm_urllib.urlopen(_req, timeout=120) as _resp:\n"
+        "        return _llm_json.loads(_resp.read())['result']\n"
     )
     resp = await client.post("/exec", json={"code": stub_code})
     resp.raise_for_status()

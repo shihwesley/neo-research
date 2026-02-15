@@ -3,3 +3,9 @@ docker
 httpx
 html2text
 dspy
+dill
+memvid-sdk
+sentence-transformers
+fastapi
+uvicorn
+ipython

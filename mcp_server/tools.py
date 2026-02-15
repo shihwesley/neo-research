@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import httpx
 from mcp.server.fastmcp import Context
 
 from mcp_server.docker_manager import BASE_URL
@@ -140,8 +141,20 @@ def register_tools(mcp) -> None:
     @mcp.tool()
     async def rlm_reset(ctx: Context) -> str:
         """Reset the sandbox kernel, clearing all state."""
+        from mcp_server.sub_agent import inject_llm_stub
+
         app = _ctx(ctx)
         data = await _post_exec(app, "get_ipython().reset(new_session=True)")
+
+        # Re-inject llm_query() since reset clears the namespace
+        cb = app.llm_callback
+        cb_url = cb.callback_url_local if app.manager._no_docker else cb.callback_url
+        inject_client = httpx.AsyncClient(base_url=BASE_URL, timeout=10)
+        try:
+            await inject_llm_stub(inject_client, cb_url)
+        finally:
+            await inject_client.aclose()
+
         if data.get("stderr"):
             return f"Reset with warnings: {data['stderr']}"
         return "Sandbox reset."

@@ -1,0 +1,435 @@
+"""Apple documentation tools backed by DocSetQuery and Context7.
+
+Wires local Apple framework docs (Dash docset) and Context7 library docs
+into the rlm-sandbox knowledge store for hybrid search.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import re
+from pathlib import Path
+from typing import Any
+
+from mcp.server.fastmcp import Context
+
+from mcp_server.knowledge import KnowledgeStore, get_store
+
+log = logging.getLogger(__name__)
+
+DOCSET_QUERY_ROOT = Path("/Users/quartershots/Source/DocSetQuery")
+TOOLS_DIR = DOCSET_QUERY_ROOT / "tools"
+DOCS_DIR = DOCSET_QUERY_ROOT / "docs" / "apple"
+
+# Framework name -> docset root path
+FRAMEWORK_PATHS: dict[str, str] = {
+    "swiftui": "/documentation/swiftui",
+    "foundation": "/documentation/foundation",
+    "uikit": "/documentation/uikit",
+    "realitykit": "/documentation/realitykit",
+    "visionos": "/documentation/visionos",
+    "vision": "/documentation/vision",
+    "arkit": "/documentation/arkit",
+    "avfoundation": "/documentation/avfoundation",
+    "combine": "/documentation/combine",
+    "swift": "/documentation/swift",
+}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_store_from_ctx(ctx: Context) -> KnowledgeStore | None:
+    """Pull the KnowledgeStore from the app context, if wired."""
+    try:
+        app = ctx.request_context.lifespan_context
+        return getattr(app, "knowledge_store", None)
+    except Exception:
+        return None
+
+
+async def _run_tool(args: list[str], cwd: Path | None = None) -> tuple[int, str, str]:
+    """Run a DocSetQuery tool as a subprocess. Returns (returncode, stdout, stderr)."""
+    proc = await asyncio.create_subprocess_exec(
+        "python3", *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        cwd=cwd or TOOLS_DIR,
+    )
+    stdout, stderr = await proc.communicate()
+    return proc.returncode, stdout.decode(), stderr.decode()
+
+
+def _parse_search_results(output: str) -> list[dict[str, str]]:
+    """Parse docindex.py search output lines.
+
+    Format: ``Title: Heading — path#anchor``
+    Returns list of dicts with keys: title, heading, path, anchor.
+    """
+    results: list[dict[str, str]] = []
+    for line in output.strip().splitlines():
+        line = line.strip()
+        if not line or line.startswith("[docindex]"):
+            continue
+        # Split on " — " to separate label from path#anchor
+        parts = line.split(" — ", 1)
+        if len(parts) != 2:
+            continue
+        label, path_anchor = parts
+        # Label is "Title: Heading"
+        label_parts = label.split(": ", 1)
+        title = label_parts[0] if label_parts else label
+        heading = label_parts[1] if len(label_parts) > 1 else ""
+        # path#anchor
+        if "#" in path_anchor:
+            path, anchor = path_anchor.rsplit("#", 1)
+        else:
+            path = path_anchor
+            anchor = ""
+        results.append({
+            "title": title,
+            "heading": heading,
+            "path": path.strip(),
+            "anchor": anchor.strip(),
+        })
+    return results
+
+
+def _read_section(file_path: Path, anchor: str) -> str | None:
+    """Read a section from a markdown file starting at the given anchor.
+
+    Returns the section text from the anchor's heading up to the next
+    heading of equal or higher level. Returns None if the anchor is not found.
+    """
+    if not file_path.exists():
+        return None
+
+    text = file_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+
+    # Find the anchor — look for either an <a id="anchor"> tag or a heading
+    # whose slug matches the anchor
+    target_line: int | None = None
+    target_level: int | None = None
+    anchor_tag = f'<a id="{anchor}">'
+
+    for i, line in enumerate(lines):
+        if anchor_tag in line:
+            # The heading is usually the next non-empty line
+            for j in range(i + 1, min(i + 3, len(lines))):
+                stripped = lines[j].lstrip()
+                if stripped.startswith("#"):
+                    level = len(stripped) - len(stripped.lstrip("#"))
+                    target_line = j
+                    target_level = level
+                    break
+            if target_line is None:
+                target_line = i
+                target_level = 2
+            break
+        # Also match heading text that slugifies to the anchor
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            level = len(stripped) - len(stripped.lstrip("#"))
+            heading_text = stripped[level:].strip()
+            slug = _slugify(heading_text)
+            if slug == anchor:
+                target_line = i
+                target_level = level
+                break
+
+    if target_line is None:
+        return None
+
+    # Collect lines until the next heading of same or higher level
+    section_lines = [lines[target_line]]
+    for i in range(target_line + 1, len(lines)):
+        stripped = lines[i].lstrip()
+        if stripped.startswith("#"):
+            level = len(stripped) - len(stripped.lstrip("#"))
+            if level <= target_level:
+                break
+        section_lines.append(lines[i])
+
+    return "\n".join(section_lines).strip()
+
+
+def _slugify(text: str) -> str:
+    """Replicate DocSetQuery's slugify for anchor matching."""
+    keep: list[str] = []
+    for char in text:
+        if char.isalnum():
+            keep.append(char.lower())
+        elif char in "/-_":
+            keep.append("-")
+    slug = "".join(keep)
+    while "--" in slug:
+        slug = slug.replace("--", "-")
+    return slug.strip("-") or "section"
+
+
+def _chunk_markdown(text: str, framework: str) -> list[dict[str, Any]]:
+    """Split markdown on ``## `` headings into chunks for ingestion.
+
+    Each chunk gets title="{framework}/{heading}", label="apple-docs".
+    """
+    chunks: list[dict[str, Any]] = []
+    current_heading = "preamble"
+    current_lines: list[str] = []
+
+    for line in text.splitlines():
+        if line.startswith("## "):
+            # Flush previous chunk
+            if current_lines:
+                chunks.append({
+                    "title": f"{framework}/{current_heading}",
+                    "label": "apple-docs",
+                    "text": "\n".join(current_lines).strip(),
+                })
+            current_heading = line[3:].strip()
+            current_lines = [line]
+        else:
+            current_lines.append(line)
+
+    # Flush the last chunk
+    if current_lines:
+        body = "\n".join(current_lines).strip()
+        if body:
+            chunks.append({
+                "title": f"{framework}/{current_heading}",
+                "label": "apple-docs",
+                "text": body,
+            })
+
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# MCP tool registration
+# ---------------------------------------------------------------------------
+
+
+def register_apple_docs_tools(mcp) -> None:
+    """Register Apple documentation tools on the MCP server instance."""
+
+    @mcp.tool()
+    async def rlm_apple_search(
+        query: str,
+        ctx: Context,
+        framework: str | None = None,
+    ) -> str:
+        """Search local Apple framework docs via DocSetQuery's index.
+
+        Returns matching headings with their section content from the
+        pre-exported Markdown files.
+
+        Args:
+            query: Search term (case-insensitive substring match on headings)
+            framework: Optional filter — only return results from this framework
+        """
+        rc, stdout, stderr = await _run_tool([
+            str(TOOLS_DIR / "docindex.py"), "search", query,
+        ])
+        if rc != 0:
+            return f"docindex search failed (rc={rc}): {stderr.strip()}"
+
+        results = _parse_search_results(stdout)
+        if not results:
+            return f"No matches for '{query}' in Apple docs index."
+
+        # Filter by framework if requested
+        if framework:
+            fw_lower = framework.lower()
+            results = [
+                r for r in results
+                if fw_lower in r["path"].lower() or fw_lower in r["title"].lower()
+            ]
+            if not results:
+                return f"No matches for '{query}' in framework '{framework}'."
+
+        # Read actual section content for each match (cap at 10)
+        parts: list[str] = []
+        for hit in results[:10]:
+            file_path = DOCSET_QUERY_ROOT / hit["path"]
+            section = None
+            if hit["anchor"]:
+                section = await asyncio.to_thread(_read_section, file_path, hit["anchor"])
+
+            parts.append(f"### {hit['title']}: {hit['heading']}")
+            parts.append(f"_Source: {hit['path']}#{hit['anchor']}_")
+            if section:
+                # Truncate very long sections
+                if len(section) > 3000:
+                    section = section[:3000] + "\n...(truncated)"
+                parts.append(section)
+            else:
+                parts.append("(section content not available)")
+            parts.append("")
+
+        header = f"Found {len(results)} matches for '{query}'"
+        if len(results) > 10:
+            header += f" (showing first 10 of {len(results)})"
+        return header + "\n\n" + "\n".join(parts)
+
+    @mcp.tool()
+    async def rlm_apple_export(
+        framework: str,
+        ctx: Context,
+        max_depth: int = 3,
+    ) -> str:
+        """Export an Apple framework's docs and index them into the knowledge store.
+
+        Runs DocSetQuery's export + sanitize pipeline, then chunks the result
+        by ## headings and ingests each chunk.
+
+        Args:
+            framework: Framework name (e.g. "swiftui", "foundation", "vision")
+            max_depth: Export traversal depth (default 3, higher = more content)
+        """
+        fw_lower = framework.lower()
+        doc_root = FRAMEWORK_PATHS.get(fw_lower)
+        if not doc_root:
+            known = ", ".join(sorted(FRAMEWORK_PATHS.keys()))
+            return (
+                f"Unknown framework '{framework}'. "
+                f"Known frameworks: {known}. "
+                f"You can also pass a custom path to docset_query.py directly."
+            )
+
+        output_path = Path(f"/tmp/rlm-apple-{fw_lower}.md")
+
+        # Step 1: export
+        rc, stdout, stderr = await _run_tool([
+            str(TOOLS_DIR / "docset_query.py"),
+            "export",
+            "--root", doc_root,
+            "--output", str(output_path),
+            "--max-depth", str(max_depth),
+        ])
+        if rc != 0:
+            return f"Export failed (rc={rc}): {stderr.strip()[:500]}"
+
+        # Step 2: sanitize
+        rc, stdout, stderr = await _run_tool([
+            str(TOOLS_DIR / "docset_sanitize.py"),
+            "--input", str(output_path),
+            "--in-place",
+            "--toc-depth", "2",
+        ])
+        if rc != 0:
+            log.warning("Sanitize had issues (rc=%d): %s", rc, stderr.strip()[:200])
+            # Continue anyway — the export file still exists
+
+        # Step 3: read and chunk
+        if not output_path.exists():
+            return f"Export file not found at {output_path} after pipeline."
+
+        text = await asyncio.to_thread(output_path.read_text, "utf-8")
+        chunks = _chunk_markdown(text, fw_lower)
+
+        # Step 4: ingest into knowledge store
+        store = _get_store_from_ctx(ctx)
+        if store is None:
+            return (
+                f"Exported {fw_lower} to {output_path} "
+                f"({len(chunks)} sections, {len(text)} bytes) "
+                f"but knowledge store is not available for indexing."
+            )
+
+        try:
+            store.ingest_many(chunks)
+        except Exception as exc:
+            log.exception("Batch ingest failed for %s", fw_lower)
+            return f"Export succeeded but ingest failed: {exc}"
+
+        return (
+            f"Exported {fw_lower}, {len(chunks)} sections indexed "
+            f"({len(text)} bytes)"
+        )
+
+    @mcp.tool()
+    async def rlm_apple_read(
+        path: str,
+        ctx: Context,
+        anchor: str | None = None,
+    ) -> str:
+        """Read a specific section from an exported Apple doc file.
+
+        Use this for targeted reads instead of pulling entire framework
+        files into context.
+
+        Args:
+            path: Path relative to DocSetQuery root (e.g. "docs/apple/swiftui.md")
+            anchor: Optional heading anchor — returns just that section. Without
+                    it, returns the first 200 lines.
+        """
+        file_path = DOCSET_QUERY_ROOT / path
+        if not file_path.exists():
+            return f"File not found: {path}"
+
+        if anchor:
+            section = await asyncio.to_thread(_read_section, file_path, anchor)
+            if section is None:
+                return f"Anchor '{anchor}' not found in {path}."
+            if len(section) > 10000:
+                section = section[:10000] + "\n...(truncated at 10k chars)"
+            return section
+
+        # No anchor — return first 200 lines with a length note
+        text = await asyncio.to_thread(file_path.read_text, "utf-8")
+        lines = text.splitlines()
+        total = len(lines)
+        preview = "\n".join(lines[:200])
+        if total > 200:
+            preview += f"\n\n... ({total} total lines, showing first 200)"
+        return preview
+
+    @mcp.tool()
+    async def rlm_context7_ingest(
+        library: str,
+        content: str,
+        ctx: Context,
+    ) -> str:
+        """Ingest Context7 docs content into the knowledge store.
+
+        Call this after you've already fetched docs via Context7 MCP tools.
+        Pass the library name and the raw content you received.
+
+        Args:
+            library: Library name (e.g. "swiftui", "react", "dspy")
+            content: The documentation text to ingest (from Context7 output)
+        """
+        store = _get_store_from_ctx(ctx)
+        if store is None:
+            return "Knowledge store not available."
+
+        if not content.strip():
+            return "No content to ingest."
+
+        # Split on ## headings, same as apple export
+        chunks = _chunk_markdown(content, library)
+        if not chunks:
+            # No headings — ingest as a single chunk
+            chunks = [{
+                "title": library,
+                "label": "context7",
+                "text": content.strip(),
+            }]
+        else:
+            # Override label to context7
+            for c in chunks:
+                c["label"] = "context7"
+
+        try:
+            frame_ids = store.ingest_many(chunks)
+        except Exception as exc:
+            log.exception("Context7 ingest failed for %s", library)
+            return f"Ingest failed: {exc}"
+
+        return (
+            f"Ingested {library} docs "
+            f"({len(content)} chars, {len(frame_ids)} frames)"
+        )
