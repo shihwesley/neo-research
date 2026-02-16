@@ -1,5 +1,5 @@
 {
-  "description": "rlm-sandbox hooks: Context7 routing and knowledge store prompts",
+  "description": "rlm-sandbox hooks: auto-index WebFetch and Context7 content into knowledge store",
   "hooks": {
     "PostToolUse": [
       {
@@ -8,6 +8,16 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/context7-to-mv2.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.venv/bin/python3 ${CLAUDE_PLUGIN_ROOT}/scripts/webfetch-to-mv2.py",
             "timeout": 10
           }
         ]
