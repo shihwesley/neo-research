@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Shell wrapper for knowledge-cli.py
+# Activates the project venv and forwards all args.
+#
+# Usage:
+#   knowledge ingest --title "Page" --label "topic" < content.txt
+#   knowledge ingest --title "Page" --label "topic" --text "inline"
+#   knowledge ingest-batch < docs.jsonl
+#   knowledge search "query"
+#   knowledge ask "question"
+#   knowledge status
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+VENV_PYTHON="$PROJECT_ROOT/.venv/bin/python"
+
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "Error: venv not found at $PROJECT_ROOT/.venv" >&2
+    echo "Run: $PROJECT_ROOT/scripts/setup.sh" >&2
+    exit 1
+fi
+
+exec "$VENV_PYTHON" "$SCRIPT_DIR/knowledge-cli.py" "$@"

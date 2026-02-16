@@ -100,7 +100,7 @@ class KnowledgeStore:
             "metadata": metadata or {},
         }
         frame_ids = self.mem.put_many([doc], embedder=self.embedder)
-        self.mem.commit()
+        self.mem.seal()
         return frame_ids
 
     def ingest_many(
@@ -119,7 +119,7 @@ class KnowledgeStore:
             for d in docs
         ]
         frame_ids = self.mem.put_many(prepared, embedder=self.embedder)
-        self.mem.commit()
+        self.mem.seal()
         return frame_ids
 
     def search(
