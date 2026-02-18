@@ -1,10 +1,29 @@
 # Changelog
 
+## 2.0.0 - 2026-02-18
+
+### Changed — Research Pipeline Redesign
+- Replaced 4 overlapping agents (rlm-researcher, rlm-sandbox, research-sandbox, research-specialist) with single unified `research-agent` that runs the full pipeline
+- New 5-phase pipeline: input parsing → question tree → source discovery → acquisition → distillation → expertise artifact
+- Centralized storage at `~/.claude/research/<topic>/` — no scattered knowledge across projects
+- Rewritten `/research` skill as thin orchestrator that spawns the research agent
+
+### Added
+- **Question tree methodology** — structured research design before searching, not blind Google queries. Each branch maps to source types and quality tiers.
+- **Distillation phase** ("Matrix download") — systematic .mv2 querying per question tree branch, producing a 3-5K token expertise artifact. Agent becomes domain expert without reading raw content.
+- **Expertise artifact format** — mental model, architecture, key APIs, common patterns, gotchas, quick reference. Compact enough to load in context.
+- **Flexible input** — handles topic strings, rich paragraphs with context, seed URLs, or any combination
+- **Resumption** — pipeline checks for existing artifacts and picks up where it left off
+- `/research load <topic>` — reload existing expertise without re-fetching
+
+### Removed
+- `agents/research-sandbox.md` — absorbed into research-agent
+- `agents/research-specialist.md` — absorbed into research-agent
+
 ## 1.3.0 - 2026-02-18
 
 ### Added
-- `research-sandbox` agent — token-efficient research via shell pipelines; fetched content never enters LLM context (5-10x cheaper than WebFetch approach). Uses markdown.new cascade for clean markdown, indexes via knowledge CLI, queries knowledge store for synthesis.
-- `research-specialist` agent — deep research with dual-path ingestion (MCP tools or CLI fallback). Indexes full page content into knowledge store for later querying.
+- research-sandbox and research-specialist agents (superseded by 2.0.0)
 
 ### Fixed
 - `KnowledgeStore.open()` now passes `enable_vec=True, enable_lex=True` to `memvid_sdk.use()` so hybrid search works on reopened stores, not just newly created ones
