@@ -4,60 +4,198 @@
 [![Tests](https://img.shields.io/badge/tests-350%20passing-brightgreen.svg)]()
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2.svg)]()
 
-Sandboxed Python execution + zero-context doc search for Claude Code. Run code in Docker without leaking API keys, search indexed documentation without reading files into the context window.
+Research pipeline for Claude Code. One command turns any topic into agent expertise — without blowing your context window.
 
 ```
-> Use rlm_search("async lifespan pattern") to find how FastAPI handles startup
+> /research "SwiftUI NavigationStack in iOS 17+ with programmatic navigation"
 
-Found 3 results:
-  1. [0.89] fastapi/advanced/events.md — "Use the lifespan parameter..."
-  2. [0.82] fastapi/tutorial/dependencies.md — "Dependencies with yield..."
-  3. [0.71] fastapi/deployment/concepts.md — "Startup and shutdown events..."
+Research complete: swiftui-navigationstack
+- Sources: 14 fetched, 12 indexed
+- Expertise: ~/.claude/research/swiftui-navigationstack/expertise.md (3.2K tokens)
+- Skill generated: ~/.claude/skills/swiftui-navigationstack/SKILL.md
+- Deep-dive: rlm_search(query="...", project="swiftui-navigationstack")
 ```
+
+## Why this exists
+
+We built rlm-sandbox as a Docker sandbox for running Python and testing whether a REPL-based approach to recursive language model programs could work. It worked, but the project was missing a clear purpose — a bag of tools without a workflow.
+
+At the same time, we had a separate `/research` skill that was supposed to help Claude learn new topics. It was doing fetch-and-hope: search Google, grab some pages, dump them in a knowledge store, and cross your fingers.
+
+Neither tool was solving the real problem: how do you make an AI agent actually *know* a topic the way a developer knows a topic? Not "I have some indexed docs I can search." Real working knowledge — the kind where you understand the mental model, know the common patterns, and can warn about the gotchas before someone hits them.
+
+So we combined them. The sandbox REPL handles the heavy data processing (fetching, indexing, querying) without burning context tokens. The research methodology structures what to look for. The distillation step turns raw indexed content into a compact expertise artifact. The agent reads 10-15K tokens of targeted excerpts instead of 500K of raw docs.
+
+The result is a research pipeline that vibe coders can use: `/research <topic>` and your agent becomes the expert. The RLM REPL theory still gets tested — the sandbox runs all the programmatic knowledge store queries during distillation. But now it has a reason to exist.
 
 ## Table of Contents
 
-- [What's New in v1.2](#whats-new-in-v12)
-- [Features](#features)
-- [Architecture](#architecture)
+- [How the pipeline works](#how-the-pipeline-works)
 - [Install](#install)
-- [Quick Start](#quick-start)
-- [Tools](#tools-21-total)
-- [Knowledge Store](#knowledge-store)
+- [Quick start](#quick-start)
+- [What it generates](#what-it-generates)
+- [Tools (21 total)](#tools-21-total)
+- [Architecture](#architecture)
+- [Knowledge store](#knowledge-store)
 - [Sandbox](#sandbox)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
 
-## Features
+## How the pipeline works
 
-- **Sandboxed execution** — IPython kernel in Docker (no network, no API keys, 2GB memory cap)
-- **DSPy sub-agents** — run recursive language model programs via Haiku 4.5, host-side
-- **Hybrid doc search** — BM25 + vector search over `.mv2` files, ~5ms query latency
-- **Doc fetching** — grab URLs, sitemaps, or local files into dual storage (raw markdown + search index)
-- **One-call research** — `rlm_research("fastapi")` finds docs, fetches, indexes, done
-- **Session persistence** — sandbox state survives MCP server restarts via dill snapshots
-- **Thread filtering** — organize knowledge by topic or workflow with `thread` parameter on search/ingest
-- **Deep reasoning** — 3-phase DSPy signatures (Recon → Filter → Aggregate) for large-context tasks
-- **Parallel sub-LLM calls** — `llm_query_batch()` fires concurrent Haiku calls from sandbox code
-- **Programmatic tool calling** — sandbox code can call knowledge search, doc fetch, and other tools directly
-- **Session auto-capture** — Claude Code Stop hook indexes session transcripts into the knowledge store
-- **Token tracking** — per-run and cumulative usage stats with cost estimation via `rlm_usage`
-- **Plugin distribution** — installs as a Claude Code plugin with agents, skills, and hooks included
+```
+/research "WebTransport protocol"
+         │
+         ▼
+  ┌─────────────────────────┐
+  │ 1. Parse input           │  Topic, URLs, context — any format
+  │ 2. Build question tree   │  4-7 branches: what/how/API/gotchas/...
+  │ 3. Discover sources      │  Targeted search per branch, quality-ranked
+  │ 4. Fetch to disk         │  curl → markdown → .mv2 (zero context cost)
+  │ 5. Distill               │  Query .mv2 per branch → expertise.md
+  │ 6. Generate artifacts    │  Skill and/or subagent from expertise
+  └─────────────────────────┘
+         │
+         ▼
+  Agent now knows the topic.
+  Knowledge store available for deep-dives.
+```
 
-## What's New in v1.2
+The input is flexible. A topic name, a paragraph of context, specific URLs, or a mix of all three. The pipeline figures out what to search for based on a question tree — not blind keyword searches.
 
-**Thread-aware knowledge store.** Search and ingest calls now accept an optional `thread` parameter. Documents tagged with a thread are only returned when that thread is queried — useful for separating session transcripts from library docs, or organizing by workflow.
+Content never enters the agent's context window during fetch. Pages go to disk, then into a `.mv2` knowledge store. The agent only reads targeted excerpts during the distillation phase.
 
-**Deep reasoning signatures.** Two new pre-built DSPy signatures (`deep_reasoning`, `deep_reasoning_multi`) encode a 3-phase strategy: scan the context for boundaries, filter chunks with keyword checks and sub-LLM calls, then aggregate into a final answer. Pass them by name to `rlm_sub_agent`.
+## Install
 
-**Parallel sub-LLM calls.** Sandbox code can now call `llm_query_batch(["p1", "p2", "p3"])` to fire multiple Haiku calls concurrently via ThreadPoolExecutor. Failed individual calls return an error string instead of crashing the batch.
+```
+/plugin marketplace add shihwesley/shihwesley-plugins
+/plugin install rlm-sandbox@shihwesley-plugins
+```
 
-**Programmatic tool calling.** The sandbox callback server now supports a `/tool_call` dispatch route. Five MCP tools are auto-injected as Python stubs into the container: `search_knowledge()`, `ask_knowledge()`, `fetch_url()`, `load_file()`, and `apple_search()`. Code in the sandbox can call these programmatically without results entering Claude's context window.
+First run creates a Python venv and installs dependencies automatically.
 
-**Session auto-capture.** A standalone `scripts/session_capture.py` script parses JSONL session transcripts, strips injected tags, chunks at message boundaries, and indexes everything into the project's `.mv2` file with `thread="sessions"`. Wire it as a Claude Code Stop hook to make every session searchable.
+Docker is optional — the research pipeline and knowledge tools work without it. Sandbox execution tools need Docker.
 
-**Token tracking.** The callback server now accumulates input/output token counts across all sub-LLM calls. `rlm_usage()` returns cumulative stats with cost estimation (Haiku 4.5 pricing). Per-run usage diffs are included in `rlm_sub_agent` results.
+<details>
+<summary>Manual setup (without plugin install)</summary>
+
+```bash
+git clone https://github.com/shihwesley/rlm-sandbox.git
+cd rlm-sandbox
+./scripts/setup.sh
+
+# Start MCP server directly (stdio transport)
+./scripts/start-server.sh
+
+# Optional: build Docker sandbox image
+docker compose up -d --build
+```
+
+</details>
+
+## Quick start
+
+After installing, restart Claude Code. The MCP server loads with 21 tools.
+
+**Research a topic (the main workflow):**
+
+```
+> /research fastapi
+
+Research complete: fastapi
+- Sources: 14 fetched, 12 indexed
+- Expertise: ~/.claude/research/fastapi/expertise.md (4.1K tokens)
+- Knowledge store: ~/.claude/research/fastapi/knowledge.mv2
+- Skill generated: ~/.claude/skills/fastapi/SKILL.md
+```
+
+**Search indexed knowledge directly:**
+
+```
+> Use rlm_search("dependency injection") to find the pattern
+
+Found 5 results:
+  1. [0.94] tutorial/dependencies.md — "Declare the dependency..."
+  2. [0.88] advanced/dependencies.md — "Sub-dependencies are resolved..."
+```
+
+**Reload expertise from a previous session:**
+
+```
+> /research load fastapi
+```
+
+**Run code in the sandbox (requires Docker):**
+
+```
+> Use rlm_exec to calculate the first 10 primes
+
+Output: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+```
+
+## What it generates
+
+The pipeline produces up to four artifacts per research topic:
+
+| Artifact | Path | What it is |
+|---|---|---|
+| Expertise doc | `~/.claude/research/<slug>/expertise.md` | 3-5K token mental model. Loaded into context = instant expertise. |
+| Knowledge store | `~/.claude/research/<slug>/knowledge.mv2` | Full indexed content. Queryable with `rlm_search`. |
+| Skill (if applicable) | `~/.claude/skills/<slug>/SKILL.md` | Reusable patterns and conventions. Loads automatically when relevant. |
+| Subagent (if applicable) | `~/.claude/agents/<slug>-specialist.md` | Domain specialist with its own context window. |
+
+Skills get generated for libraries and frameworks — things where you want conventions loaded during coding. Subagents get generated for complex domains that warrant a dedicated specialist. Some topics get both.
+
+Everything is centralized under `~/.claude/research/`. Research done before a project exists stays accessible after you create one. No scattered knowledge.
+
+## Tools (21 total)
+
+### Sandbox (requires Docker)
+
+| Tool | What it does |
+|------|-------------|
+| `rlm_exec(code)` | Execute Python, return stdout/stderr |
+| `rlm_load(path, var_name)` | Load a host file into a sandbox variable |
+| `rlm_get(name)` | Get a variable or evaluate an expression |
+| `rlm_vars()` | List all sandbox variables |
+| `rlm_sub_agent(signature, inputs)` | Run a DSPy sub-agent (Haiku 4.5) |
+| `rlm_reset()` | Clear all sandbox state |
+
+### Knowledge store (no Docker needed)
+
+| Tool | What it does |
+|------|-------------|
+| `rlm_search(query, top_k, mode, thread)` | Hybrid search (BM25 + vector) over indexed docs |
+| `rlm_ask(question, context_only, thread)` | RAG Q&A or context-only chunk retrieval |
+| `rlm_timeline(since, until)` | Browse docs by recency |
+| `rlm_ingest(title, text, thread)` | Manually add content to the index |
+
+### Fetching (no Docker needed)
+
+| Tool | What it does |
+|------|-------------|
+| `rlm_fetch(url)` | Fetch URL → raw .md file + .mv2 index |
+| `rlm_load_dir(glob)` | Bulk-load local files into both stores |
+| `rlm_fetch_sitemap(url)` | Fetch all pages from a sitemap |
+
+### Apple docs (no Docker needed)
+
+| Tool | What it does |
+|------|-------------|
+| `rlm_apple_search(query)` | Search local Apple framework docs via DocSetQuery index |
+| `rlm_apple_export(framework)` | Export framework docs, chunk, and index into knowledge store |
+| `rlm_apple_read(path, anchor)` | Read a specific section from exported Apple doc files |
+| `rlm_context7_ingest(library, content)` | Ingest Context7 docs into the knowledge store |
+
+### Research and management (no Docker needed)
+
+| Tool | What it does |
+|------|-------------|
+| `rlm_research(topic)` | Find docs, fetch, index, confirm |
+| `rlm_knowledge_status()` | Show indexed sources and sizes |
+| `rlm_knowledge_clear()` | Wipe the .mv2 index |
+| `rlm_usage(reset)` | Cumulative token stats and cost estimate |
 
 ## Architecture
 
@@ -100,118 +238,9 @@ graph TB
     style CC fill:#7c3aed,stroke:#a78bfa,color:#fff
 ```
 
-## Install
+The host process runs the MCP server, DSPy inference, and knowledge store. The Docker container only handles Python execution — no API keys, no network access. DSPy stays host-side so the container stays lean.
 
-```
-/plugin marketplace add shihwesley/shihwesley-plugins
-/plugin install rlm-sandbox@shihwesley-plugins
-```
-
-First run auto-creates a Python venv and installs all dependencies.
-
-Docker is optional — knowledge tools work without it, sandbox tools need it.
-
-<details>
-<summary>Manual setup (without plugin install)</summary>
-
-```bash
-git clone https://github.com/shihwesley/rlm-sandbox.git
-cd rlm-sandbox
-./scripts/setup.sh
-
-# Start MCP server directly (stdio transport)
-./scripts/start-server.sh
-
-# Optional: build Docker sandbox image
-docker compose up -d --build
-```
-
-</details>
-
-## Quick Start
-
-After installing, restart Claude Code. The `rlm-sandbox` MCP server appears with 16 tools.
-
-**Index some docs and search them:**
-
-```
-> /rlm-sandbox:research fastapi
-
-Indexed 47 pages for 'fastapi'. Use rlm_search to query.
-
-> Use rlm_search("dependency injection") to find the pattern
-
-Found 5 results:
-  1. [0.94] tutorial/dependencies.md — "Declare the dependency..."
-  2. [0.88] advanced/dependencies.md — "Sub-dependencies are resolved..."
-```
-
-**Run code in the sandbox:**
-
-```
-> Use rlm_exec to calculate the first 10 primes
-
-Output:
-[2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
-```
-
-**Run a DSPy sub-agent:**
-
-```
-> Use rlm_sub_agent with signature "question -> answer" and input "What is the capital of France?"
-
-Result: {"answer": "Paris"}
-```
-
-## Tools (21 total)
-
-### Sandbox (requires Docker)
-
-| Tool | What it does |
-|------|-------------|
-| `rlm_exec(code)` | Execute Python, return stdout/stderr |
-| `rlm_load(path, var_name)` | Load a host file into a sandbox variable |
-| `rlm_get(name)` | Get a variable or evaluate an expression |
-| `rlm_vars()` | List all sandbox variables |
-| `rlm_sub_agent(signature, inputs)` | Run a DSPy sub-agent (Haiku 4.5) |
-| `rlm_reset()` | Clear all sandbox state |
-
-### Knowledge Store (no Docker needed)
-
-| Tool | What it does |
-|------|-------------|
-| `rlm_search(query, top_k, mode, thread)` | Hybrid search (BM25 + vector) over indexed docs |
-| `rlm_ask(question, context_only, thread)` | RAG Q&A or context-only chunk retrieval |
-| `rlm_timeline(since, until)` | Browse docs by recency |
-| `rlm_ingest(title, text, thread)` | Manually add content to the index |
-
-### Fetching (no Docker needed)
-
-| Tool | What it does |
-|------|-------------|
-| `rlm_fetch(url)` | Fetch URL → raw .md file + .mv2 index |
-| `rlm_load_dir(glob)` | Bulk-load local files into both stores |
-| `rlm_fetch_sitemap(url)` | Fetch all pages from a sitemap |
-
-### Apple Docs (no Docker needed)
-
-| Tool | What it does |
-|------|-------------|
-| `rlm_apple_search(query)` | Search local Apple framework docs via DocSetQuery index |
-| `rlm_apple_export(framework)` | Export framework docs, chunk, and index into knowledge store |
-| `rlm_apple_read(path, anchor)` | Read a specific section from exported Apple doc files |
-| `rlm_context7_ingest(library, content)` | Ingest Context7 docs into the knowledge store |
-
-### Research & Management (no Docker needed)
-
-| Tool | What it does |
-|------|-------------|
-| `rlm_research(topic)` | Find docs, fetch, index, confirm |
-| `rlm_knowledge_status()` | Show indexed sources and sizes |
-| `rlm_knowledge_clear()` | Wipe the .mv2 index |
-| `rlm_usage(reset)` | Cumulative token stats and cost estimate |
-
-## Knowledge Store
+## Knowledge store
 
 ```mermaid
 graph LR
@@ -259,7 +288,7 @@ graph LR
     style QUERY fill:#5f1e1e,stroke:#f87171,color:#fff
 ```
 
-Each project gets one `.mv2` file at `~/.rlm-sandbox/knowledge/{project-hash}.mv2`. Five concurrent indexes in a single portable file — no sidecars, no lock files.
+Each project gets one `.mv2` file. Five concurrent indexes in a single portable file — no sidecars, no lock files.
 
 Embeddings use all-MiniLM-L6-v2 (384d, ~50MB model). No API keys, no external services. Falls back to lexical-only if sentence-transformers isn't installed.
 
@@ -279,16 +308,16 @@ The container gets null DNS (no outbound network), no API keys, and no host file
 
 ## Configuration
 
-The plugin includes two custom agents and two skills:
+The plugin includes agents and skills:
 
 | Component | Name | Purpose |
 |-----------|------|---------|
-| Agent | `rlm-researcher` | Delegates research tasks (fetch + index docs) |
-| Agent | `rlm-sandbox` | Delegates code execution tasks |
-| Skill | `/rlm-sandbox:research <topic>` | Manual research trigger |
+| Agent | `research-agent` | Runs the full research pipeline (question tree → fetch → distill → artifacts) |
+| Agent | `rlm-sandbox` | Sandbox code execution tasks |
+| Skill | `/rlm-sandbox:research <topic>` | Research trigger — spawns the research agent |
 | Skill | `/rlm-sandbox:knowledge-status` | Check what's indexed |
 
-A PostToolUse hook on `mcp__context7__query-docs` nudges Claude to also index Context7 results into the knowledge store.
+A PostToolUse hook on `mcp__context7__query-docs` indexes Context7 results into the knowledge store automatically.
 
 ## Contributing
 
@@ -307,4 +336,4 @@ pytest tests/test_sandbox.py tests/test_mcp_server.py
 
 ## License
 
-[MIT](LICENSE)
+MIT
