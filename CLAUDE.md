@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Docker sandbox for executing Python/DSPy code in isolated containers, exposed to Claude via an MCP server.
+Research pipeline + sandboxed Python execution for Claude Code. Turns topics into agent expertise via structured research, zero-context fetching, and REPL-based distillation.
 
 ## Planning
 

@@ -3,7 +3,7 @@
 ## 2.0.0 - 2026-02-18
 
 ### Changed — Research Pipeline Redesign
-- Replaced 4 overlapping agents (rlm-researcher, rlm-sandbox, research-sandbox, research-specialist) with single unified `research-agent` that runs the full pipeline
+- Replaced 4 overlapping agents (neo-researcher, neo-research, research-sandbox, research-specialist) with single unified `research-agent` that runs the full pipeline
 - New 5-phase pipeline: input parsing → question tree → source discovery → acquisition → distillation → expertise artifact
 - Centralized storage at `~/.claude/research/<topic>/` — no scattered knowledge across projects
 - Rewritten `/research` skill as thin orchestrator that spawns the research agent
@@ -52,8 +52,8 @@
   - `rlm_fetch`, `rlm_load_dir`, `rlm_fetch_sitemap` tools
 - Research automation: compound research tool + knowledge management
   - `rlm_research`, `rlm_knowledge_status`, `rlm_knowledge_clear` tools
-- Custom agents: `rlm-researcher` (doc research) and `rlm-sandbox` (code execution)
-- Skills: `/rlm-sandbox:research` and `/rlm-sandbox:knowledge-status`
+- Custom agents: `neo-researcher` (doc research) and `neo-research` (code execution)
+- Skills: `/neo-research:research` and `/neo-research:knowledge-status`
 - Context7 routing hook (indexes Context7 fetches into knowledge store)
 - Auto-setup script (venv + deps on first run)
 

@@ -1,13 +1,13 @@
 {
-  "name": "rlm-sandbox",
+  "name": "neo-research",
   "description": "Research pipeline + sandboxed Python execution for Claude Code. Turns any topic into agent expertise: structured question tree → source discovery → zero-context fetch (content never enters LLM context) → .mv2 indexing → REPL-based distillation → compact expertise artifact. Also runs Python in isolated Docker containers for code execution, DSPy sub-agents, and data analysis.",
   "version": "2.0.0",
   "author": {
     "name": "shihwesley",
     "email": "shihwesley@users.noreply.github.com"
   },
-  "homepage": "https://github.com/shihwesley/rlm-sandbox",
-  "repository": "https://github.com/shihwesley/rlm-sandbox",
+  "homepage": "https://github.com/shihwesley/neo-research",
+  "repository": "https://github.com/shihwesley/neo-research",
   "license": "MIT",
   "keywords": [
     "sandbox",

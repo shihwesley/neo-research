@@ -15,7 +15,7 @@ updated: 2026-02-13
 Memvid-backed knowledge store using `.mv2` files for hybrid search (BM25 + vector + reranker) over documentation. Replaces the FAISS+fastembed decision from the search spike. Each project gets one `.mv2` file. The MCP server manages the memvid lifecycle: create, open, ingest, search, close.
 
 ## Requirements
-- [ ] REQ-1: One `.mv2` file per project at `~/.rlm-sandbox/knowledge/{project-hash}.mv2`
+- [ ] REQ-1: One `.mv2` file per project at `~/.neo-research/knowledge/{project-hash}.mv2`
 - [ ] REQ-2: Hybrid search via `find(mode='auto')` — BM25 + vector + reranker
 - [ ] REQ-3: `rlm_search(query, top_k, mode)` MCP tool — returns ranked chunks with source attribution
 - [ ] REQ-4: `rlm_ask(question, context_only)` MCP tool — RAG Q&A or context-only chunk retrieval
@@ -48,7 +48,7 @@ import os
 
 class KnowledgeStore:
     def __init__(self, project_hash: str):
-        self.path = f"~/.rlm-sandbox/knowledge/{project_hash}.mv2"
+        self.path = f"~/.neo-research/knowledge/{project_hash}.mv2"
         self.mem = None
 
     def open(self):

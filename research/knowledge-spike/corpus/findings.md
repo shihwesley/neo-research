@@ -123,8 +123,8 @@ Three layers exist in Anthropic's sandbox ecosystem:
 - Native /sandbox restricts Claude Code's bash commands — security for the agent
 - srt restricts arbitrary processes — security for our MCP server
 - Docker Sandboxes isolate the whole agent — deployment/hosting concern
-- rlm-sandbox creates a tool for the agent — different axis entirely
-- They compose: rlm-sandbox MCP server could be srt-wrapped while Claude runs with /sandbox enabled
+- neo-research creates a tool for the agent — different axis entirely
+- They compose: neo-research MCP server could be srt-wrapped while Claude runs with /sandbox enabled
 
 ### Three Candidate Paths for sandbox-research spec
 | Path | Approach | Pros | Cons |

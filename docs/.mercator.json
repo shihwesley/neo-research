@@ -1,20 +1,26 @@
 {
-  "root": "/Users/quartershots/Source/rlm-sandbox",
+  "root": "/Users/quartershots/Source/neo-research",
   "files": [
     {
       "path": ".claude-plugin/plugin.json",
-      "tokens": 286,
-      "size_bytes": 1071,
-      "hash": "fa6e73e2ed74"
+      "tokens": 231,
+      "size_bytes": 843,
+      "hash": "0a08882e4a59"
     },
     {
-      "path": "agents/rlm-researcher.md",
+      "path": "agents/research-agent.md",
+      "tokens": 4458,
+      "size_bytes": 17554,
+      "hash": "0ee93d04b17f"
+    },
+    {
+      "path": "agents/neo-researcher.md",
       "tokens": 845,
       "size_bytes": 3501,
       "hash": "26114268d90a"
     },
     {
-      "path": "agents/rlm-sandbox.md",
+      "path": "agents/neo-research.md",
       "tokens": 790,
       "size_bytes": 3348,
       "hash": "3f0de2f286af"
@@ -26,7 +32,7 @@
       "hash": "f23f12d04a18"
     },
     {
-      "path": "claude-integration/rlm-routing-rules.md",
+      "path": "claude-integration/neo-routing-rules.md",
       "tokens": 991,
       "size_bytes": 4322,
       "hash": "1dd52132c656"
@@ -158,10 +164,28 @@
       "hash": "73ae0cb4be0b"
     },
     {
+      "path": "docs/plans/v2-findings.md",
+      "tokens": 464,
+      "size_bytes": 2111,
+      "hash": "dbaf2e694f60"
+    },
+    {
+      "path": "docs/plans/v2-progress.md",
+      "tokens": 269,
+      "size_bytes": 1067,
+      "hash": "96f934ea8b49"
+    },
+    {
+      "path": "docs/plans/v2-research-pipeline.md",
+      "tokens": 2724,
+      "size_bytes": 11267,
+      "hash": "4db4468d5ff8"
+    },
+    {
       "path": "docs/.mercator.json",
-      "tokens": 12590,
-      "size_bytes": 40054,
-      "hash": "e379b14de783"
+      "tokens": 12987,
+      "size_bytes": 41262,
+      "hash": "712296a7caa5"
     },
     {
       "path": "docs/.mercator.json.tmp",
@@ -207,9 +231,9 @@
     },
     {
       "path": "mcp_server/knowledge.py",
-      "tokens": 2942,
-      "size_bytes": 13131,
-      "hash": "0fe09bc81e45"
+      "tokens": 2950,
+      "size_bytes": 13165,
+      "hash": "53066d34f07e"
     },
     {
       "path": "mcp_server/llm_callback.py",
@@ -549,9 +573,9 @@
     },
     {
       "path": "skills/research/SKILL.md",
-      "tokens": 2410,
-      "size_bytes": 10127,
-      "hash": "cf60310fc36e"
+      "tokens": 983,
+      "size_bytes": 3988,
+      "hash": "b531f42733a8"
     },
     {
       "path": "tests/__init__.py",
@@ -651,9 +675,9 @@
     },
     {
       "path": "CHANGELOG.md",
-      "tokens": 555,
-      "size_bytes": 2068,
-      "hash": "971006020db8"
+      "tokens": 958,
+      "size_bytes": 3838,
+      "hash": "37fae98ca4e6"
     },
     {
       "path": "CLAUDE.md",
@@ -683,13 +707,13 @@
       "path": "pyproject.toml",
       "tokens": 64,
       "size_bytes": 226,
-      "hash": "a172c5d743b6"
+      "hash": "623db4b3149b"
     },
     {
       "path": "README.md",
-      "tokens": 3005,
-      "size_bytes": 11452,
-      "hash": "46e38a6d8934"
+      "tokens": 3180,
+      "size_bytes": 12458,
+      "hash": "b30947b43718"
     }
   ],
   "directories": [
@@ -715,39 +739,45 @@
     "tests",
     "workspace"
   ],
-  "total_tokens": 165339,
-  "total_files": 115,
+  "total_tokens": 172755,
+  "total_files": 119,
   "skipped": [],
   "merkle": {
-    "root_hash": "5c65229f1527",
+    "root_hash": "5be50501bfc1",
     "tree": {
       ".claude-plugin/plugin.json": {
-        "hash": "fa6e73e2ed74",
-        "tokens": 286,
+        "hash": "0a08882e4a59",
+        "tokens": 231,
         "type": "file"
       },
       ".claude-plugin": {
-        "hash": "1796a44458f4",
+        "hash": "f06bb30b4b44",
         "children": [
           ".claude-plugin/plugin.json"
         ],
         "type": "dir"
       },
-      "agents/rlm-researcher.md": {
+      "agents/research-agent.md": {
+        "hash": "0ee93d04b17f",
+        "tokens": 4458,
+        "type": "file"
+      },
+      "agents/neo-researcher.md": {
         "hash": "26114268d90a",
         "tokens": 845,
         "type": "file"
       },
-      "agents/rlm-sandbox.md": {
+      "agents/neo-research.md": {
         "hash": "3f0de2f286af",
         "tokens": 790,
         "type": "file"
       },
       "agents": {
-        "hash": "ba3892d8cd21",
+        "hash": "51a680b05ff1",
         "children": [
-          "agents/rlm-researcher.md",
-          "agents/rlm-sandbox.md"
+          "agents/research-agent.md",
+          "agents/neo-researcher.md",
+          "agents/neo-research.md"
         ],
         "type": "dir"
       },
@@ -756,7 +786,7 @@
         "tokens": 48,
         "type": "file"
       },
-      "claude-integration/rlm-routing-rules.md": {
+      "claude-integration/neo-routing-rules.md": {
         "hash": "1dd52132c656",
         "tokens": 991,
         "type": "file"
@@ -770,7 +800,7 @@
         "hash": "305180ed7665",
         "children": [
           "claude-integration/mcp-config.json",
-          "claude-integration/rlm-routing-rules.md",
+          "claude-integration/neo-routing-rules.md",
           "claude-integration/setup.sh"
         ],
         "type": "dir"
@@ -897,20 +927,38 @@
         "tokens": 4147,
         "type": "file"
       },
+      "docs/plans/v2-findings.md": {
+        "hash": "dbaf2e694f60",
+        "tokens": 464,
+        "type": "file"
+      },
+      "docs/plans/v2-progress.md": {
+        "hash": "96f934ea8b49",
+        "tokens": 269,
+        "type": "file"
+      },
+      "docs/plans/v2-research-pipeline.md": {
+        "hash": "4db4468d5ff8",
+        "tokens": 2724,
+        "type": "file"
+      },
       "docs/plans": {
-        "hash": "aa2a5ef15dfb",
+        "hash": "8495947a5b31",
         "children": [
           "docs/plans/specs",
           "docs/plans/2026-02-16-markdown-first-fetching.md",
           "docs/plans/findings.md",
           "docs/plans/manifest.md",
-          "docs/plans/progress.md"
+          "docs/plans/progress.md",
+          "docs/plans/v2-findings.md",
+          "docs/plans/v2-progress.md",
+          "docs/plans/v2-research-pipeline.md"
         ],
         "type": "dir"
       },
       "docs/.mercator.json": {
-        "hash": "e379b14de783",
-        "tokens": 12590,
+        "hash": "712296a7caa5",
+        "tokens": 12987,
         "type": "file"
       },
       "docs/.mercator.json.tmp": {
@@ -924,7 +972,7 @@
         "type": "file"
       },
       "docs": {
-        "hash": "924b3fafbc97",
+        "hash": "83b823704a53",
         "children": [
           "docs/plans",
           "docs/.mercator.json",
@@ -966,8 +1014,8 @@
         "type": "file"
       },
       "mcp_server/knowledge.py": {
-        "hash": "0fe09bc81e45",
-        "tokens": 2942,
+        "hash": "53066d34f07e",
+        "tokens": 2950,
         "type": "file"
       },
       "mcp_server/llm_callback.py": {
@@ -1016,7 +1064,7 @@
         "type": "file"
       },
       "mcp_server": {
-        "hash": "385e7aabe25d",
+        "hash": "4de9bb424ac6",
         "children": [
           "mcp_server/__init__.py",
           "mcp_server/apple_docs.py",
@@ -1377,19 +1425,19 @@
         "type": "dir"
       },
       "skills/research/SKILL.md": {
-        "hash": "cf60310fc36e",
-        "tokens": 2410,
+        "hash": "b531f42733a8",
+        "tokens": 983,
         "type": "file"
       },
       "skills/research": {
-        "hash": "b3e8c4e1bba7",
+        "hash": "11b485165d65",
         "children": [
           "skills/research/SKILL.md"
         ],
         "type": "dir"
       },
       "skills": {
-        "hash": "0ab0c45b1f97",
+        "hash": "3b01e2be49d9",
         "children": [
           "skills/knowledge-status",
           "skills/research"
@@ -1503,8 +1551,8 @@
         "type": "file"
       },
       "CHANGELOG.md": {
-        "hash": "971006020db8",
-        "tokens": 555,
+        "hash": "37fae98ca4e6",
+        "tokens": 958,
         "type": "file"
       },
       "CLAUDE.md": {
@@ -1528,17 +1576,17 @@
         "type": "file"
       },
       "pyproject.toml": {
-        "hash": "a172c5d743b6",
+        "hash": "623db4b3149b",
         "tokens": 64,
         "type": "file"
       },
       "README.md": {
-        "hash": "46e38a6d8934",
-        "tokens": 3005,
+        "hash": "b30947b43718",
+        "tokens": 3180,
         "type": "file"
       },
       "/": {
-        "hash": "5c65229f1527",
+        "hash": "5be50501bfc1",
         "children": [
           ".claude-plugin",
           "agents",

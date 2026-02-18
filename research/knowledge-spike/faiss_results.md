@@ -46,7 +46,7 @@
 | 1 | README.md | 6 | 0.8375 | p -d --build    # Tier 2: Docker # or uvicorn sandbox.server... |
 | 2 | docker-sandbox-spec.md | 0 | 0.7833 | --- name: docker-sandbox phase: 1 sprint: 1 parent: null dep... |
 | 3 | docker-sandbox-spec.md | 5 | 0.7829 | with /exec, /vars, /var/:name routes \| \| sandbox/repl.py \|... |
-| 4 | README.md | 0 | 0.7794 | # rlm-sandbox  A Docker sandbox for running Python and DSPy... |
+| 4 | README.md | 0 | 0.7794 | # neo-research  A Docker sandbox for running Python and DSPy... |
 | 5 | dspy-cheat-sheet.md | 2 | 0.7700 | Protocol The interface RLM expects from `interpreter=`. Defa... |
 
 ### What is DSPy and how does it optimize prompts?

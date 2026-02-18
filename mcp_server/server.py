@@ -86,7 +86,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         await manager.stop()
 
 
-mcp = FastMCP("rlm-sandbox", lifespan=lifespan)
+mcp = FastMCP("neo-research", lifespan=lifespan)
 register_tools(mcp)
 register_knowledge_tools(mcp)
 register_fetcher_tools(mcp)

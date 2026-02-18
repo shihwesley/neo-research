@@ -23,10 +23,10 @@ graph TB
         MCP --> RES[Research<br/>research.py]
         MCP --> SUB[Sub-Agent<br/>sub_agent.py]
         SUB --> DSPY[DSPy RLM<br/>Haiku 4.5]
-        KS --> MV2[~/.rlm-sandbox/knowledge/*.mv2]
+        KS --> MV2[~/.neo-research/knowledge/*.mv2]
         FETCH --> CACHE[.claude/docs/**/*.md]
         FETCH --> MV2
-        SESSION[SessionManager<br/>session.py] --> SNAP[~/.rlm-sandbox/sessions/*.pkl]
+        SESSION[SessionManager<br/>session.py] --> SNAP[~/.neo-research/sessions/*.pkl]
     end
 
     subgraph DOCKER["Docker Container"]
@@ -40,7 +40,7 @@ graph TB
 ## Directory Structure
 
 ```
-rlm-sandbox/
+neo-research/
   .claude-plugin/         Plugin manifest (plugin.json)
   .mcp.json               MCP server registration for Claude Code
   agents/                 Custom agent definitions (2 agents)
@@ -107,8 +107,8 @@ Runs inside Docker. Exposes a FastAPI HTTP server around an IPython kernel.
 
 | File | Purpose | Tokens |
 |------|---------|--------|
-| `rlm-researcher.md` | Sonnet agent for doc research (fetch + index workflow) | 845 |
-| `rlm-sandbox.md` | Sonnet agent for sandboxed code execution | 790 |
+| `neo-researcher.md` | Sonnet agent for doc research (fetch + index workflow) | 845 |
+| `neo-research.md` | Sonnet agent for sandboxed code execution | 790 |
 
 ### skills/
 

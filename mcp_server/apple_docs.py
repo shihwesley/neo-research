@@ -1,7 +1,7 @@
 """Apple documentation tools backed by DocSetQuery and Context7.
 
 Wires local Apple framework docs (Dash docset) and Context7 library docs
-into the rlm-sandbox knowledge store for hybrid search.
+into the neo-research knowledge store for hybrid search.
 """
 
 from __future__ import annotations

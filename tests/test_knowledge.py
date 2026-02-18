@@ -74,7 +74,7 @@ class TestKnowledgeStoreInit:
     def test_path_is_correct(self):
         from mcp_server.knowledge import KnowledgeStore
         store = KnowledgeStore("abc123")
-        expected = os.path.expanduser("~/.rlm-sandbox/knowledge/abc123.mv2")
+        expected = os.path.expanduser("~/.neo-research/knowledge/abc123.mv2")
         assert store.path == expected
 
     def test_mem_starts_none(self):

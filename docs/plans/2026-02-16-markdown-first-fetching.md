@@ -6,7 +6,7 @@
 
 **Architecture:** Three-tier cascade in `fetcher.py` (negotiation → proxy → conversion). Two PostToolUse hooks: one for WebFetch auto-indexing, one for Context7→.mv2 ingestion.
 
-**Tech Stack:** Python 3.12, httpx, FastMCP hooks, rlm-sandbox KnowledgeStore
+**Tech Stack:** Python 3.12, httpx, FastMCP hooks, neo-research KnowledgeStore
 
 ---
 
@@ -97,7 +97,7 @@ def test_markdown_new_skipped_for_blocked_domains(self):
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cd /Users/quartershots/Source/rlm-sandbox && python -m pytest tests/test_fetcher.py::TestFetchUrl::test_accept_markdown_negotiation tests/test_fetcher.py::TestFetchUrl::test_markdown_new_fallback tests/test_fetcher.py::TestFetchUrl::test_html2text_final_fallback -v`
+Run: `cd /Users/quartershots/Source/neo-research && python -m pytest tests/test_fetcher.py::TestFetchUrl::test_accept_markdown_negotiation tests/test_fetcher.py::TestFetchUrl::test_markdown_new_fallback tests/test_fetcher.py::TestFetchUrl::test_html2text_final_fallback -v`
 Expected: FAIL — `markdown_source` key missing from meta, no `Accept` header sent
 
 **Step 3: Implement the cascade in `fetch_url()`**
@@ -219,7 +219,7 @@ return {"content": content, "doc_path": doc_path, "meta": meta,
 
 **Step 4: Run all fetcher tests**
 
-Run: `cd /Users/quartershots/Source/rlm-sandbox && python -m pytest tests/test_fetcher.py -v`
+Run: `cd /Users/quartershots/Source/neo-research && python -m pytest tests/test_fetcher.py -v`
 Expected: ALL PASS
 
 **Step 5: Commit**
@@ -328,7 +328,7 @@ if __name__ == "__main__":
 
 **Step 2: Make it executable**
 
-Run: `chmod +x /Users/quartershots/Source/rlm-sandbox/scripts/webfetch-to-mv2.py`
+Run: `chmod +x /Users/quartershots/Source/neo-research/scripts/webfetch-to-mv2.py`
 
 **Step 3: Register the hook in hooks.json**
 
@@ -336,7 +336,7 @@ Update `hooks/hooks.json` to add the WebFetch matcher:
 
 ```json
 {
-  "description": "rlm-sandbox hooks: auto-index WebFetch and Context7 content into knowledge store",
+  "description": "neo-research hooks: auto-index WebFetch and Context7 content into knowledge store",
   "hooks": {
     "PostToolUse": [
       {
@@ -366,7 +366,7 @@ Update `hooks/hooks.json` to add the WebFetch matcher:
 
 **Step 4: Manual test**
 
-Run: `echo '{"tool_name":"WebFetch","tool_input":{"url":"https://developers.cloudflare.com/fundamentals/reference/markdown-for-agents/","prompt":"test"}}' | python3 /Users/quartershots/Source/rlm-sandbox/scripts/webfetch-to-mv2.py`
+Run: `echo '{"tool_name":"WebFetch","tool_input":{"url":"https://developers.cloudflare.com/fundamentals/reference/markdown-for-agents/","prompt":"test"}}' | python3 /Users/quartershots/Source/neo-research/scripts/webfetch-to-mv2.py`
 Expected: "Auto-indexed ... into knowledge store (via negotiated)"
 
 **Step 5: Commit**
@@ -446,7 +446,7 @@ The matcher in `hooks.json` already points to this script. No change needed.
 
 **Step 4: Manual test**
 
-Run: `echo '{"tool_name":"mcp__context7__query-docs","tool_params":{"libraryId":"/vercel/next.js"},"tool_result":"# Next.js Docs\n\nThis is sample content for testing the Context7 hook ingestion pipeline. It needs to be at least 50 characters."}' | bash /Users/quartershots/Source/rlm-sandbox/scripts/context7-to-mv2.sh`
+Run: `echo '{"tool_name":"mcp__context7__query-docs","tool_params":{"libraryId":"/vercel/next.js"},"tool_result":"# Next.js Docs\n\nThis is sample content for testing the Context7 hook ingestion pipeline. It needs to be at least 50 characters."}' | bash /Users/quartershots/Source/neo-research/scripts/context7-to-mv2.sh`
 Expected: `Context7 docs for "next.js" indexed into knowledge store.`
 
 **Step 5: Commit**
@@ -462,12 +462,12 @@ git commit -m "feat(hooks): context7-to-mv2 now ingests docs into .mv2 knowledge
 
 **Step 1: Run full test suite**
 
-Run: `cd /Users/quartershots/Source/rlm-sandbox && python -m pytest tests/test_fetcher.py -v`
+Run: `cd /Users/quartershots/Source/neo-research && python -m pytest tests/test_fetcher.py -v`
 Expected: ALL PASS
 
 **Step 2: Integration smoke test**
 
-Run: `cd /Users/quartershots/Source/rlm-sandbox && python3 -c "
+Run: `cd /Users/quartershots/Source/neo-research && python3 -c "
 import asyncio, httpx
 from mcp_server.fetcher import fetch_url
 

@@ -434,7 +434,7 @@ class TestProjectHash:
     def test_mv2_path_format(self):
         path = session_capture._mv2_path("/my/project")
         assert path.endswith(".mv2")
-        assert "/.rlm-sandbox/knowledge/" in path
+        assert "/.neo-research/knowledge/" in path
 
 
 # ---------------------------------------------------------------------------

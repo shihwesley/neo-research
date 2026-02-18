@@ -1,5 +1,5 @@
 ---
-project: rlm-sandbox
+project: neo-research
 created: 2026-02-11
 updated: 2026-02-13
 mode: spec-driven

@@ -1,11 +1,11 @@
 ---
 name: knowledge-status
-description: Show what's indexed in the rlm-sandbox knowledge store — sources, chunk counts, file sizes. Use when the user asks what docs are available, what's been indexed, or wants a status check before searching.
+description: Show what's indexed in the neo-research knowledge store — sources, chunk counts, file sizes. Use when the user asks what docs are available, what's been indexed, or wants a status check before searching.
 ---
 
 # Knowledge Store Status
 
-Check and report the current state of the rlm-sandbox knowledge store — what's indexed, how much, and what you can search.
+Check and report the current state of the neo-research knowledge store — what's indexed, how much, and what you can search.
 
 ## When This Skill Triggers
 
@@ -13,7 +13,7 @@ Use this skill when the user:
 - Asks "what's indexed?" or "what docs do I have?"
 - Wants to know if a library is searchable before using `rlm_search`
 - Says "knowledge status", "check the store", or "what's in the knowledge base?"
-- Needs to decide whether to run `/rlm-sandbox:research` or `rlm_fetch` before starting work
+- Needs to decide whether to run `/neo-research:research` or `rlm_fetch` before starting work
 
 ## Step 1: Call the Status Tool
 
@@ -24,7 +24,7 @@ rlm_knowledge_status()
 ```
 
 The tool returns a structured report with:
-- **Store path**: Absolute path to the `.mv2` file (e.g. `~/.rlm-sandbox/knowledge/a3f8c1...mv2`)
+- **Store path**: Absolute path to the `.mv2` file (e.g. `~/.neo-research/knowledge/a3f8c1...mv2`)
 - **Size**: File size in KB. A populated store is usually 500KB–50MB depending on content.
 - **Status**: Either the size or "not created yet" if no indexing has happened.
 - **Sources**: A per-library breakdown of raw `.md` files stored under `.claude/docs/{library}/`.
@@ -42,7 +42,7 @@ Example interpretation:
 
 ### Store exists but is small (< 100 KB)
 
-A store under 100 KB usually means only a few pages got indexed — maybe a manual `rlm_ingest` call or a partial fetch. Warn the user that search coverage is thin. Suggest running `/rlm-sandbox:research <topic>` to build up the index.
+A store under 100 KB usually means only a few pages got indexed — maybe a manual `rlm_ingest` call or a partial fetch. Warn the user that search coverage is thin. Suggest running `/neo-research:research <topic>` to build up the index.
 
 ### Store not created yet
 
@@ -62,13 +62,13 @@ Suggest running `rlm_load_dir(".claude/docs/**/*.md")` to re-ingest the existing
 
 When the store is empty or missing a library the user needs, recommend one of these approaches (in order of preference):
 
-### Automatic: `/rlm-sandbox:research <topic>`
+### Automatic: `/neo-research:research <topic>`
 
 Best for common libraries. This skill handles everything — finds the doc site, fetches pages, indexes them. Works for any topic in the KNOWN_DOCS list (fastapi, dspy, pydantic, httpx, pytest, django, numpy, pandas, pytorch, transformers, etc.) and attempts pattern-matching for unknown topics.
 
 Example:
 ```
-/rlm-sandbox:research fastapi
+/neo-research:research fastapi
 ```
 
 ### Manual URL: `rlm_fetch(url)`
@@ -126,7 +126,7 @@ If the store is empty:
 Knowledge store is empty — no docs indexed yet.
 
 To populate it:
-  /rlm-sandbox:research fastapi    (automatic — finds and indexes docs)
+  /neo-research:research fastapi    (automatic — finds and indexes docs)
   rlm_fetch("https://url")         (manual — fetch a specific page)
 ```
 
@@ -169,9 +169,9 @@ The default `auto` mode works well for most queries. Suggest `lex` when the user
 
 The knowledge store falls back to lexical-only (BM25) search when the sentence-transformers embedder can't load. This is noted in server logs but not always visible to the user. If search results seem poor despite having content indexed, mention this possibility — reinstalling `sentence-transformers` or running `scripts/setup.sh` again usually fixes it.
 
-### Permission errors on ~/.rlm-sandbox/knowledge/
+### Permission errors on ~/.neo-research/knowledge/
 
-The knowledge directory defaults to `~/.rlm-sandbox/knowledge/`. If the user gets permission errors, the directory either doesn't exist (run `scripts/setup.sh`) or has wrong ownership.
+The knowledge directory defaults to `~/.neo-research/knowledge/`. If the user gets permission errors, the directory either doesn't exist (run `scripts/setup.sh`) or has wrong ownership.
 
 ### Store corruption
 

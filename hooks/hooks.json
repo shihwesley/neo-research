@@ -1,5 +1,5 @@
 {
-  "description": "rlm-sandbox hooks: auto-index WebFetch and Context7 content into knowledge store",
+  "description": "neo-research hooks: auto-index WebFetch and Context7 content into knowledge store",
   "hooks": {
     "PostToolUse": [
       {

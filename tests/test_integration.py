@@ -51,7 +51,7 @@ class TestMCPConfig:
 class TestRoutingRules:
     """Verify routing rules file has expected content."""
 
-    rules_path = INTEGRATION_DIR / "rlm-routing-rules.md"
+    rules_path = INTEGRATION_DIR / "neo-routing-rules.md"
 
     def test_file_exists(self):
         assert self.rules_path.exists()
@@ -111,7 +111,7 @@ class TestSetupScript:
 
     def test_references_routing_rules(self):
         content = self.script_path.read_text()
-        assert "rlm-routing-rules.md" in content
+        assert "neo-routing-rules.md" in content
 
     def test_checks_python_availability(self):
         content = self.script_path.read_text()

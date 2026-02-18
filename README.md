@@ -1,4 +1,4 @@
-# rlm-sandbox
+# neo-research
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-350%20passing-brightgreen.svg)]()
@@ -18,7 +18,7 @@ Research complete: swiftui-navigationstack
 
 ## Why this exists
 
-We built rlm-sandbox as a Docker sandbox for running Python and testing whether a REPL-based approach to recursive language model programs could work. It worked, but the project was missing a clear purpose — a bag of tools without a workflow.
+We built neo-research as a Docker sandbox for running Python and testing whether a REPL-based approach to recursive language model programs could work. It worked, but the project was missing a clear purpose — a bag of tools without a workflow.
 
 At the same time, we had a separate `/research` skill that was supposed to help Claude learn new topics. It was doing fetch-and-hope: search Google, grab some pages, dump them in a knowledge store, and cross your fingers.
 
@@ -70,7 +70,7 @@ Content never enters the agent's context window during fetch. Pages go to disk, 
 
 ```
 /plugin marketplace add shihwesley/shihwesley-plugins
-/plugin install rlm-sandbox@shihwesley-plugins
+/plugin install neo-research@shihwesley-plugins
 ```
 
 First run creates a Python venv and installs dependencies automatically.
@@ -81,8 +81,8 @@ Docker is optional — the research pipeline and knowledge tools work without it
 <summary>Manual setup (without plugin install)</summary>
 
 ```bash
-git clone https://github.com/shihwesley/rlm-sandbox.git
-cd rlm-sandbox
+git clone https://github.com/shihwesley/neo-research.git
+cd neo-research
 ./scripts/setup.sh
 
 # Start MCP server directly (stdio transport)
@@ -225,7 +225,7 @@ graph TB
     subgraph STORAGE["Persistent Storage"]
         MV2[".mv2 knowledge index"]
         RAW[".claude/docs/ raw files"]
-        SNAP["~/.rlm-sandbox/ snapshots"]
+        SNAP["~/.neo-research/ snapshots"]
     end
 
     KS -->|read/write| MV2
@@ -313,9 +313,9 @@ The plugin includes agents and skills:
 | Component | Name | Purpose |
 |-----------|------|---------|
 | Agent | `research-agent` | Runs the full research pipeline (question tree → fetch → distill → artifacts) |
-| Agent | `rlm-sandbox` | Sandbox code execution tasks |
-| Skill | `/rlm-sandbox:research <topic>` | Research trigger — spawns the research agent |
-| Skill | `/rlm-sandbox:knowledge-status` | Check what's indexed |
+| Agent | `neo-research` | Sandbox code execution tasks |
+| Skill | `/neo-research:research <topic>` | Research trigger — spawns the research agent |
+| Skill | `/neo-research:knowledge-status` | Check what's indexed |
 
 A PostToolUse hook on `mcp__context7__query-docs` indexes Context7 results into the knowledge store automatically.
 

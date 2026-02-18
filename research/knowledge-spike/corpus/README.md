@@ -1,4 +1,4 @@
-# rlm-sandbox
+# neo-research
 
 A Docker sandbox for running Python and DSPy code in isolated containers, exposed to Claude Code through an MCP server.
 
@@ -89,7 +89,7 @@ sandbox/             Container payload
   repl.py            IPython kernel wrapper
 claude-integration/  Claude Code setup files
   mcp-config.json    MCP server registration (has PROJECT_DIR placeholder)
-  rlm-routing-rules.md  When to use sandbox vs. built-in tools
+  neo-routing-rules.md  When to use sandbox vs. built-in tools
   setup.sh           Installer script
 tests/               pytest test suite
 workspace/           Mounted into container at /workspace
@@ -107,4 +107,4 @@ pytest tests/test_mcp_server.py tests/test_sandbox.py
 
 ## `/sandbox` Compatibility Note
 
-Claude Code has a built-in `/sandbox` command that runs code in its own sandbox environment. `rlm-sandbox` is a separate system — it provides a persistent IPython kernel with variable state across calls, DSPy sub-agent support, and file loading from the host. Both can coexist. The routing rules in `.claude/rlm-routing-rules.md` tell Claude when to prefer one over the other.
+Claude Code has a built-in `/sandbox` command that runs code in its own sandbox environment. `neo-research` is a separate system — it provides a persistent IPython kernel with variable state across calls, DSPy sub-agent support, and file loading from the host. Both can coexist. The routing rules in `.claude/neo-routing-rules.md` tell Claude when to prefer one over the other.

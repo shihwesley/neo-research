@@ -13,7 +13,7 @@
       "~/.netrc"
     ],
     "allowWrite": [
-      "~/.rlm-sandbox"
+      "~/.neo-research"
     ],
     "denyWrite": [
       ".env",

@@ -16,7 +16,7 @@ from mcp.server.fastmcp import Context
 
 log = logging.getLogger(__name__)
 
-KNOWLEDGE_DIR = os.path.expanduser("~/.rlm-sandbox/knowledge")
+KNOWLEDGE_DIR = os.path.expanduser("~/.neo-research/knowledge")
 
 # Minimum relevancy score for adaptive retrieval (score-cliff cutoff)
 DEFAULT_MIN_RELEVANCY = 0.35

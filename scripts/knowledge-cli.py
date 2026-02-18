@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI bridge to the rlm-sandbox knowledge store.
+"""CLI bridge to the neo-research knowledge store.
 
 Bypasses MCP so subagents can index research data via Bash.
 Same KnowledgeStore, same .mv2 files, no MCP connection needed.
@@ -206,7 +206,7 @@ def _add_project_arg(parser: argparse.ArgumentParser) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="CLI bridge to rlm-sandbox knowledge store"
+        description="CLI bridge to neo-research knowledge store"
     )
 
     sub = parser.add_subparsers(dest="command", required=True)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Start the rlm-sandbox MCP server.
+# Start the neo-research MCP server.
 # Called by Claude Code via .mcp.json — communicates over stdio.
 
 PLUGIN_ROOT="${RLM_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"

@@ -72,7 +72,7 @@ Do NOT read full doc files into context. Use rlm_search instead.
 
 Returns structured summary:
 ```
-Knowledge Store: ~/.rlm-sandbox/knowledge/{project-hash}.mv2
+Knowledge Store: ~/.neo-research/knowledge/{project-hash}.mv2
 Sources: 89 documents indexed
 Total chunks: ~450
 Last updated: 2026-02-13 09:10

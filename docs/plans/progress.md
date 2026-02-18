@@ -130,7 +130,7 @@
   - mcp_server/server.py (modified — lifespan wiring + FastMCP migration)
   - mcp_server/tools.py (modified — AppContext/shared httpx client refactor)
   - claude-integration/mcp-config.json (created)
-  - claude-integration/rlm-routing-rules.md (created)
+  - claude-integration/neo-routing-rules.md (created)
   - claude-integration/setup.sh (created)
   - README.md (created)
   - tests/test_persistence.py (created — 7 tests)

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Replace the current agent zoo (rlm-researcher, rlm-sandbox, research-sandbox, research-specialist) with a single unified research pipeline. One agent runs the full cycle: structured research design → format-agnostic acquisition → REPL-based distillation → expertise artifact. The agent becomes a genuine expert on the topic without blowing the context window.
+Replace the current agent zoo (neo-researcher, neo-research, research-sandbox, research-specialist) with a single unified research pipeline. One agent runs the full cycle: structured research design → format-agnostic acquisition → REPL-based distillation → expertise artifact. The agent becomes a genuine expert on the topic without blowing the context window.
 
 ## Priority
 
@@ -252,7 +252,7 @@ The agent uses `rlm_exec` to run Python in the sandbox. The Python code:
 
 ## Agent Design
 
-**One agent replaces four.** Name: `research-agent` (or keep `rlm-researcher` and rewrite it).
+**One agent replaces four.** Name: `research-agent` (or keep `neo-researcher` and rewrite it).
 
 Frontmatter:
 ```yaml
@@ -280,8 +280,8 @@ The skill:
 ## What Gets Deleted
 
 After this redesign ships:
-- `agents/rlm-researcher.md` → replaced by `agents/research-agent.md`
-- `agents/rlm-sandbox.md` → keep (sandbox execution is still a valid standalone use case)
+- `agents/neo-researcher.md` → replaced by `agents/research-agent.md`
+- `agents/neo-research.md` → keep (sandbox execution is still a valid standalone use case)
 - `agents/research-sandbox.md` → delete (absorbed into research-agent)
 - `agents/research-specialist.md` → delete (absorbed into research-agent)
 - Global copies in `~/.claude/agents/` and `Source/.claude/agents/` → clean up

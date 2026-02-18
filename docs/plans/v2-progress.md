@@ -35,7 +35,7 @@
 | Question | Answer |
 |----------|--------|
 | Where am I? | Planning complete, ready for Phase 1 |
-| Where am I going? | Implement 5-phase research pipeline in rlm-sandbox |
+| Where am I going? | Implement 5-phase research pipeline in neo-research |
 | What's the goal? | Single agent that turns any topic into agent expertise |
 | What have I learned? | See v2-findings.md |
 | What have I done? | Plan written, tasks created |

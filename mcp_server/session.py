@@ -15,7 +15,7 @@ from mcp_server.docker_manager import BASE_URL
 
 log = logging.getLogger(__name__)
 
-SESSIONS_DIR = Path.home() / ".rlm-sandbox" / "sessions"
+SESSIONS_DIR = Path.home() / ".neo-research" / "sessions"
 AUTO_SAVE_INTERVAL = 300  # 5 minutes
 SNAPSHOT_EXPIRY_DAYS = 7
 

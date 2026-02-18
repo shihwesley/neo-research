@@ -22,7 +22,7 @@ Save and restore sandbox state so it survives across Claude Code sessions, /clea
 
 ## Acceptance Criteria
 - [ ] AC-1: After rlm.exec("x = 42"), stopping and restarting the container, rlm.get("x") returns 42
-- [ ] AC-2: Snapshot files stored at ~/.rlm-sandbox/sessions/{session-id}.pkl
+- [ ] AC-2: Snapshot files stored at ~/.neo-research/sessions/{session-id}.pkl
 - [ ] AC-3: Auto-save fires on container stop (not crash — crash loses unsaved state)
 - [ ] AC-4: Restore handles missing/corrupt snapshots gracefully (starts fresh, warns)
 - [ ] AC-5: Non-serializable variables (open files, connections) are skipped with a warning

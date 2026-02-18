@@ -242,7 +242,7 @@ async def test_recursive_llm() -> bool:
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
-    print("\nrlm-sandbox E2E Validation")
+    print("\nneo-research E2E Validation")
     print("=" * 60)
 
     results = {}

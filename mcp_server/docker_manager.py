@@ -13,9 +13,9 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-CONTAINER_NAME = "rlm-sandbox"
+CONTAINER_NAME = "neo-research"
 CONTAINER_PORT = 8080
-IMAGE_NAME = "rlm-sandbox-sandbox"  # docker compose default: <project>-<service>
+IMAGE_NAME = "neo-research-sandbox"  # docker compose default: <project>-<service>
 BASE_URL = f"http://localhost:{CONTAINER_PORT}"
 HEALTH_INTERVAL = 30  # seconds
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

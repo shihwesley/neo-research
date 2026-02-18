@@ -40,7 +40,7 @@ Fetching layer that pulls documentation from web URLs, local files, and sitemaps
 ```
 rlm_fetch(url)
   ├── Raw file → .claude/docs/{library}/{path}.md  (human-readable, TLDR cache)
-  └── mem.put() → ~/.rlm-sandbox/knowledge/{project}.mv2  (search index)
+  └── mem.put() → ~/.neo-research/knowledge/{project}.mv2  (search index)
 ```
 
 The raw files let TLDR read-enforcer hooks work (93% token savings on reads). The .mv2 gives semantic search without reading files into context at all.

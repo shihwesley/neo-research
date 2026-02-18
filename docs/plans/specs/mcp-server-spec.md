@@ -91,7 +91,7 @@ No glob support for rlm.load in v1 — single file paths only.
 
 ## Research Spike Updates (2026-02-12)
 - **srt wrapping:** MCP server should run inside `srt` sandbox for defense-in-depth.
-  Config: allowLocalBinding=true, denyRead=[~/.ssh, ~/.aws, etc], allowWrite=[~/.rlm-sandbox].
+  Config: allowLocalBinding=true, denyRead=[~/.ssh, ~/.aws, etc], allowWrite=[~/.neo-research].
   This prevents the MCP server from reading secrets or exfiltrating data even if compromised.
 - **--no-docker flag:** Add fallback mode where MCP server starts the kernel as a bare
   srt-wrapped process instead of a Docker container. Uses research/srt-prototype/kernel.py pattern.

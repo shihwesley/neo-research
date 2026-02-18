@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# rlm-sandbox Claude Code integration installer
+# neo-research Claude Code integration installer
 # Safe to run multiple times (idempotent).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,7 +11,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CLAUDE_MCP_DIR="$HOME/.claude"
 CLAUDE_MCP_CONFIG="$CLAUDE_MCP_DIR/mcp_settings.json"
 
-echo "rlm-sandbox integration setup"
+echo "neo-research integration setup"
 echo "Project: $PROJECT_DIR"
 echo ""
 
@@ -82,14 +82,14 @@ echo "Installing routing rules..."
 PROJECT_CLAUDE_DIR="$PROJECT_DIR/.claude"
 mkdir -p "$PROJECT_CLAUDE_DIR"
 
-RULES_DEST="$PROJECT_CLAUDE_DIR/rlm-routing-rules.md"
+RULES_DEST="$PROJECT_CLAUDE_DIR/neo-routing-rules.md"
 
 if [ -L "$RULES_DEST" ] || [ -f "$RULES_DEST" ]; then
     rm "$RULES_DEST"
 fi
 
 # Symlink so updates to the source propagate automatically
-ln -s "$SCRIPT_DIR/rlm-routing-rules.md" "$RULES_DEST"
+ln -s "$SCRIPT_DIR/neo-routing-rules.md" "$RULES_DEST"
 echo "Linked routing rules -> $RULES_DEST"
 
 # --- Verify ---

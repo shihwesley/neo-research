@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# rlm-sandbox plugin setup
+# neo-research plugin setup
 # Creates venv, installs Python deps, optionally pulls Docker image.
 
 PLUGIN_ROOT="${RLM_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 VENV_DIR="$PLUGIN_ROOT/.venv"
 
-echo "=== rlm-sandbox setup ==="
+echo "=== neo-research setup ==="
 
 # 1. Python venv
 if [ ! -d "$VENV_DIR" ]; then
@@ -31,17 +31,17 @@ echo "Installing Python dependencies..."
     ipython
 
 # 2. Data directories
-mkdir -p ~/.rlm-sandbox/knowledge
-mkdir -p ~/.rlm-sandbox/sessions
-echo "Knowledge store: ~/.rlm-sandbox/knowledge/"
-echo "Session store:   ~/.rlm-sandbox/sessions/"
+mkdir -p ~/.neo-research/knowledge
+mkdir -p ~/.neo-research/sessions
+echo "Knowledge store: ~/.neo-research/knowledge/"
+echo "Session store:   ~/.neo-research/sessions/"
 
 # 3. Docker (optional — needed for sandbox, not for knowledge tools)
 if command -v docker &>/dev/null; then
     if docker info &>/dev/null 2>&1; then
         echo "Docker available. Building sandbox image..."
         if [ -f "$PLUGIN_ROOT/Dockerfile" ]; then
-            docker build -t rlm-sandbox "$PLUGIN_ROOT" -q 2>/dev/null || \
+            docker build -t neo-research "$PLUGIN_ROOT" -q 2>/dev/null || \
                 echo "Warning: Docker build failed. Sandbox tools won't work, but knowledge tools will."
         fi
     else

@@ -24,7 +24,7 @@ Single agent, phased execution. One agent runs all 5 phases sequentially. No sub
 
 | Decision | Rationale |
 |----------|-----------|
-| Single agent replaces 4 | Current zoo (rlm-researcher, rlm-sandbox, research-sandbox, research-specialist) has overlapping roles. One agent with clear phases eliminates confusion. |
+| Single agent replaces 4 | Current zoo (neo-researcher, neo-research, research-sandbox, research-specialist) has overlapping roles. One agent with clear phases eliminates confusion. |
 | Centralized at ~/.claude/research/ | Research happens before/during/across projects. Central location prevents scattering. Any project can read the expertise docs. |
 | Question tree before searching | Real research starts with structured questions, not blind Google queries. Each branch maps to source types. |
 | Distillation via REPL | The missing piece. Sandbox queries .mv2 systematically, returns structured excerpts. Agent sees ~10-15K tokens of targeted results instead of 500K of raw content. |

@@ -37,7 +37,7 @@ instead of Read for large files. Without them, the sandbox exists but the agent 
 | File | Action | Purpose |
 |------|--------|---------|
 | claude-integration/mcp-config.json | create | MCP server registration for Claude Code |
-| claude-integration/rlm-routing-rules.md | create | Separate .claude/ file with rlm.* routing rules |
+| claude-integration/neo-routing-rules.md | create | Separate .claude/ file with rlm.* routing rules |
 | claude-integration/setup.sh | create | Installer script (copies config, installs routing rules) |
 | README.md | create | Project overview, three isolation tiers, quick start, tool reference |
 | tests/test_integration.py | create | Smoke test: verify rlm.* tools discoverable |
@@ -65,6 +65,6 @@ instead of Read for large files. Without them, the sandbox exists but the agent 
   Tier 3: Docker Sandboxes deployment (future, requires Docker Desktop upgrade)
 - **/sandbox compatibility:** rlm.* MCP tools go through MCP permissions, not bash sandbox.
   Native /sandbox and srt don't conflict — they sandbox different processes.
-  Document that enabling /sandbox with rlm-sandbox is recommended for defense-in-depth.
+  Document that enabling /sandbox with neo-research is recommended for defense-in-depth.
 - **Docker Sandboxes deployment:** `docker sandbox` not in Docker Desktop 28.0.1.
   Defer as a future deployment target. Document requirements when available.

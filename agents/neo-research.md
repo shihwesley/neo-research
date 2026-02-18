@@ -1,9 +1,9 @@
 ---
-name: rlm-sandbox
+name: neo-research
 description: Execute Python code in an isolated Docker sandbox with DSPy sub-agent support. Use for code execution, data analysis, or recursive language model tasks that need sandboxed evaluation.
 tools: Read, Grep, Glob, Bash
 model: sonnet
-mcpServers: ["rlm-sandbox"]
+mcpServers: ["neo-research"]
 whenToUse: |
   Delegate to this agent when the task involves running Python code that should
   not have access to the host environment, API keys, or network. Also use for
@@ -37,23 +37,23 @@ Knowledge (for looking up docs while working):
 <example>
 Context: The user wants to analyze a CSV file without exposing its contents to the main session.
 User: "Analyze the sales data in data/sales.csv — give me the top 10 products by revenue."
-Agent delegates to rlm-sandbox, which calls rlm_load("data/sales.csv", "sales") to bring the file into the sandbox, then rlm_exec("import pandas as pd; df = pd.read_csv(sales); top = df.groupby('product')['revenue'].sum().nlargest(10); print(top)") and returns the result.
+Agent delegates to neo-research, which calls rlm_load("data/sales.csv", "sales") to bring the file into the sandbox, then rlm_exec("import pandas as pd; df = pd.read_csv(sales); top = df.groupby('product')['revenue'].sum().nlargest(10); print(top)") and returns the result.
 </example>
 
 <example>
 Context: The user needs to evaluate a DSPy signature against test inputs.
 User: "Test this DSPy signature: 'question -> answer, confidence' with a few sample questions."
-Agent delegates to rlm-sandbox, which calls rlm_sub_agent("question -> answer, confidence", {"question": "What is the capital of France?"}) and repeats for each test input, collecting and comparing results.
+Agent delegates to neo-research, which calls rlm_sub_agent("question -> answer, confidence", {"question": "What is the capital of France?"}) and repeats for each test input, collecting and comparing results.
 </example>
 
 <example>
 Context: The user wants to prototype a data transformation before committing it to the codebase.
 User: "Try parsing these JSON logs — extract timestamps and error codes, see if the regex works."
-Agent delegates to rlm-sandbox, which uses rlm_exec to run the parsing code in isolation, iterates on the regex if it fails, and reports the working pattern back.
+Agent delegates to neo-research, which uses rlm_exec to run the parsing code in isolation, iterates on the regex if it fails, and reports the working pattern back.
 </example>
 
 <example>
 Context: The user needs to verify a numerical computation without trusting the main environment.
 User: "Calculate the eigenvalues of this 4x4 matrix to check my manual work."
-Agent delegates to rlm-sandbox, which uses rlm_exec with numpy to compute eigenvalues and returns the results without needing network access or special permissions.
+Agent delegates to neo-research, which uses rlm_exec with numpy to compute eigenvalues and returns the results without needing network access or special permissions.
 </example>

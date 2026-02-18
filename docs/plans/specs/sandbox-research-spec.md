@@ -11,7 +11,7 @@ created: 2026-02-12
 # Sandbox Infrastructure Research Spike
 
 ## Overview
-Evaluate three integration paths between Anthropic's official sandbox infrastructure and the rlm-sandbox execution environment. Produce a recommendation that docker-sandbox spec will implement.
+Evaluate three integration paths between Anthropic's official sandbox infrastructure and the neo-research execution environment. Produce a recommendation that docker-sandbox spec will implement.
 
 ## Requirements
 - [ ] REQ-1: Prototype srt-only path (IPython kernel as bare process wrapped with @anthropic-ai/sandbox-runtime)
@@ -39,12 +39,12 @@ Evaluate three integration paths between Anthropic's official sandbox infrastruc
 ### Path B: Hybrid (srt + Docker)
 - Keep docker-compose.yml with IPython kernel container (existing plan)
 - Wrap MCP server: `srt --settings mcp-srt.json python mcp-server/server.py`
-- srt config for MCP: allowWrite=[~/.rlm-sandbox], denyRead=[~/.ssh], allow localhost:8080
+- srt config for MCP: allowWrite=[~/.neo-research], denyRead=[~/.ssh], allow localhost:8080
 - Test: MCP server can reach Docker container but nothing else
 - Benefit: defense-in-depth — even if MCP server is compromised, srt blocks exfiltration
 
 ### Path C: Docker Sandboxes target
-- Run: `docker sandbox run rlm-sandbox ~/project`
+- Run: `docker sandbox run neo-research ~/project`
 - Inside the sandbox VM, our Docker container runs via the sandbox's private Docker daemon
 - Test: can we build and start our container inside the sandbox?
 - Check: does Docker-in-Docker work? Performance overhead?

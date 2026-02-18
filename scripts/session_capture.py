@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 CHUNK_SIZE = 4096
 
 # .mv2 storage directory — mirrors KnowledgeStore.KNOWLEDGE_DIR
-KNOWLEDGE_DIR = os.path.expanduser("~/.rlm-sandbox/knowledge")
+KNOWLEDGE_DIR = os.path.expanduser("~/.neo-research/knowledge")
 
 # Tags to strip from transcript content (REQ-2).
 _STRIP_PATTERNS = [
