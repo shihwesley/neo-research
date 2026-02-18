@@ -22,8 +22,14 @@ All research lives at `~/.claude/research/<topic-slug>/`:
 ~/.claude/research/<slug>/
 ├── expertise.md       # The expertise artifact (3-5K tokens)
 ├── knowledge.mv2      # Full indexed content (queryable)
-├── sources.json       # Fetch metadata
+├── sources.json       # Fetch metadata + generated artifact paths
 └── question-tree.md   # Research design
+```
+
+Generated artifacts (when applicable):
+```
+~/.claude/skills/<slug>/SKILL.md        # Reusable skill (patterns, APIs, conventions)
+~/.claude/agents/<slug>-specialist.md   # Specialist subagent (deep domain work)
 ```
 
 Resolve `~` to the absolute home directory path before using any file tools.
@@ -369,19 +375,123 @@ Read the expertise doc yourself. Ask: if someone gave me only this document and 
 
 ---
 
-## Phase 5: Load & Report
+## Phase 5: Load & Artifact Generation
 
 ### Step 5a: Load expertise into current session
 
 Read `expertise.md` and present it. You now know the topic.
 
-### Step 5b: Cleanup
+### Step 5b: Generate reusable artifacts (skill / subagent / both)
+
+After loading the expertise, evaluate whether the knowledge should become a persistent Claude Code artifact. The expertise doc is the raw material — now decide if it should be packaged for reuse.
+
+#### Decision matrix
+
+| Research type | Generate | Why |
+|---|---|---|
+| Library/framework (SwiftUI, TCA, FastAPI) | **Skill** | Patterns, conventions, API reference — Claude should apply this during coding |
+| Protocol/spec (WebTransport, HTTP/3) | **Skill** | Reference knowledge for implementation work |
+| Complex domain (ML pipeline, distributed systems) | **Subagent** | Needs isolated specialist with focused context |
+| Library + complex patterns (RealityKit, GRDB) | **Both** | Skill for quick reference, subagent for deep work |
+| Broad concept (authentication, caching strategies) | **Skill** | Conventions and patterns, not a specialist domain |
+
+#### Generating a skill
+
+Write to `~/.claude/skills/<slug>/SKILL.md`:
+
+```yaml
+---
+name: <slug>
+description: "<Topic> patterns, APIs, and conventions. Use when working with <topic> — provides key types, common patterns, gotchas, and quick reference."
+---
+```
+
+The skill body comes from the expertise doc, restructured for in-context use:
+
+```markdown
+# <Topic> Reference
+
+When working with <topic>, follow these patterns and conventions.
+
+## Key APIs
+[From expertise.md ## Key APIs / Interfaces — the 20% that covers 80%]
+
+## Patterns
+[From expertise.md ## Common Patterns — concrete, copy-pasteable examples]
+
+## Gotchas
+[From expertise.md ## Gotchas & Pitfalls — specific warnings, not vague caution]
+
+## Quick Reference
+[From expertise.md ## Quick Reference — cheat sheet]
+```
+
+Keep the skill under 500 lines (per Claude Code docs). The skill is reference material, not the full expertise doc. Link to the knowledge store for deep-dives:
+
+```markdown
+For deeper information: `rlm_search(query="...", project="<slug>")`
+Full expertise: `~/.claude/research/<slug>/expertise.md`
+```
+
+#### Generating a subagent
+
+Write to `~/.claude/agents/<slug>-specialist.md`:
+
+```yaml
+---
+name: <slug>-specialist
+description: >
+  <Topic> specialist. Delegates to this agent for <domain>-specific implementation,
+  debugging, or architecture decisions. Has deep knowledge of <topic> patterns,
+  APIs, and common pitfalls.
+model: sonnet
+tools: Read, Write, Edit, Glob, Grep, Bash
+---
+```
+
+The subagent body is the full expertise doc (it runs in its own context, so size matters less) plus implementation instructions:
+
+```markdown
+You are a <topic> specialist. You have deep knowledge of <topic> from indexed documentation.
+
+## Your Expertise
+[Paste full expertise.md content here]
+
+## Knowledge Store
+For details beyond this document, query the knowledge store:
+- Search: `rlm_search(query="...", project="<slug>", top_k=5)`
+- Ask: `rlm_ask(question="...", project="<slug>")`
+
+Load these tools at startup: `ToolSearch(query="rlm_search")`
+
+## How You Work
+1. When given a task, first check if your expertise doc covers it
+2. If you need more detail, query the knowledge store
+3. Apply <topic> patterns and conventions from your expertise
+4. Flag gotchas proactively — don't wait for the user to hit them
+```
+
+#### Record what was generated
+
+Update `~/.claude/research/<slug>/sources.json` with an `artifacts` field:
+
+```json
+{
+  "artifacts": {
+    "skill": "~/.claude/skills/<slug>/SKILL.md",
+    "subagent": "~/.claude/agents/<slug>-specialist.md",
+    "generated": "<ISO date>"
+  }
+}
+```
+
+### Step 5c: Cleanup
 
 ```bash
 rm -rf /tmp/research-$SLUG
 ```
 
-### Step 5c: Report
+### Step 5d: Report
 
 ```
 Research complete: <topic>
@@ -389,6 +499,9 @@ Research complete: <topic>
 - Expertise: ~/.claude/research/<slug>/expertise.md (<N> tokens)
 - Knowledge store: ~/.claude/research/<slug>/knowledge.mv2
 - Deep-dive: rlm_search(query="...", project="<slug>")
+- Skill: ~/.claude/skills/<slug>/SKILL.md (if generated)
+- Subagent: ~/.claude/agents/<slug>-specialist.md (if generated)
+- Reload later: /research load <topic>
 ```
 
 ---
@@ -401,7 +514,8 @@ If the pipeline gets interrupted (context window, rate limits, user stops):
 2. If `question-tree.md` exists → skip Phase 1
 3. If `sources.json` has discovered URLs → skip Phase 2
 4. If `knowledge.mv2` exists and test search works → skip Phase 3
-5. If `expertise.md` exists → skip to loading
+5. If `expertise.md` exists → skip to Phase 5 (load + artifact check)
+6. If `sources.json` has `artifacts` field → skills/agents already generated, skip to load
 
 The pipeline is idempotent. Re-running picks up where it left off.
 
