@@ -51,12 +51,12 @@ graph TD
 | 4 | 2 | orchestrator-integration | completed | doc-fetcher, search-engine |
 | 5 | 1 | apple-docs-pipeline | completed | mcp-server, search-engine |
 | 5 | 1 | recursive-execution | completed | mcp-server |
-| 6 | 1 | thread-support | draft | — |
-| 6 | 1 | deep-reasoning | draft | — |
-| 6 | 1 | parallel-llm | draft | — |
-| 6 | 1 | programmatic-tools | draft | — |
-| 6 | 2 | session-capture | draft | thread-support |
-| 6 | 2 | token-tracking | draft | parallel-llm |
+| 6 | 1 | thread-support | completed | — |
+| 6 | 1 | deep-reasoning | completed | — |
+| 6 | 1 | parallel-llm | completed | — |
+| 6 | 1 | programmatic-tools | completed | — |
+| 6 | 2 | session-capture | completed | thread-support |
+| 6 | 2 | token-tracking | completed | parallel-llm |
 
 **Note (2026-02-13):** Phase 4 specs rewritten to use memvid-sdk instead of FAISS+fastembed. Decision reversal documented in findings.md.
 

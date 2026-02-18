@@ -29,15 +29,15 @@
 | session-persistence | 2 | 1 | completed | d1ad217 | 2026-02-12 |
 | claude-integration | 2 | 1 | completed | d1ad217 | 2026-02-12 |
 | search-spike | 3 | 1 | completed | ebd8785 | 2026-02-12 |
-| doc-fetcher | 4 | 1 | draft (rewritten for memvid) | -- | 2026-02-13 |
-| search-engine | 4 | 1 | draft (rewritten for memvid) | -- | 2026-02-13 |
-| orchestrator-integration | 4 | 2 | draft (rewritten for memvid) | -- | 2026-02-13 |
-| thread-support | 6 | 1 | draft | -- | 2026-02-17 |
-| deep-reasoning | 6 | 1 | draft | -- | 2026-02-17 |
-| parallel-llm | 6 | 1 | draft | -- | 2026-02-17 |
-| session-capture | 6 | 2 | draft | -- | 2026-02-17 |
-| token-tracking | 6 | 2 | draft | -- | 2026-02-17 |
-| programmatic-tools | 6 | 1 | draft | -- | 2026-02-17 |
+| doc-fetcher | 4 | 1 | completed | 0158cc0 | 2026-02-13 |
+| search-engine | 4 | 1 | completed | 0158cc0 | 2026-02-13 |
+| orchestrator-integration | 4 | 2 | completed | 8c3c675 | 2026-02-13 |
+| thread-support | 6 | 1 | completed | b704703 | 2026-02-17 |
+| deep-reasoning | 6 | 1 | completed | b704703 | 2026-02-17 |
+| parallel-llm | 6 | 1 | completed | b704703 | 2026-02-17 |
+| programmatic-tools | 6 | 1 | completed | b704703 | 2026-02-17 |
+| session-capture | 6 | 2 | completed | b704703 | 2026-02-17 |
+| token-tracking | 6 | 2 | completed | b704703 | 2026-02-17 |
 
 ### Phase 0, Sprint 1: Sandbox Research Spike
 - **Status:** completed
@@ -220,24 +220,51 @@
 - Design decisions: CLI bridge for capture, ThreadPoolExecutor for parallelism, dual-output for costs
 - Analyzed Anthropic's programmatic tool calling pattern — added 6th spec for multi-tool sandbox dispatch
 
-### Phase 6, Sprint 1: Thread Support + Deep Reasoning + Parallel LLM (parallel)
-- **Status:** pending
-- **Started:** --
+### Phase 6, Sprint 1: Thread Support + Deep Reasoning + Parallel LLM + Programmatic Tools (parallel)
+- **Status:** completed
+- **Started:** 2026-02-17
+- **Completed:** 2026-02-17
+- **Tests:** 350/353 passed (57 new, 3 pre-existing docker import failures)
+- **Commit:** b704703
+- **Dispatch:** Agent Teams — 3 parallel agents (sprint1-core, sprint1-parallel, sprint1-tools)
 - Actions taken:
-  - Spec files written
+  - thread-support: thread/namespace filtering on knowledge store ingest/search/ask with post-filter
+  - deep-reasoning: 3-phase DSPy signatures (Recon/Filter/Aggregate) with NAMED_SIGNATURES lookup
+  - parallel-llm: llm_query_batch() via ThreadPoolExecutor for concurrent sub-LLM calls
+  - programmatic-tools: /tool_call callback route, SANDBOX_TOOLS registry, auto-generated stubs (5 tools)
+  - Fixed seal()→commit() in knowledge.py ingest/ingest_many (incremental flush, not final close)
+- Files modified:
+  - mcp_server/knowledge.py (thread params + seal→commit fix)
+  - mcp_server/signatures.py (deep reasoning signatures + named lookup)
+  - mcp_server/sub_agent.py (resolve_signature, llm_query_batch stub, inject_tool_stubs)
+  - mcp_server/llm_callback.py (/tool_call route, SANDBOX_TOOLS, tool handlers)
+  - mcp_server/server.py (inject_tool_stubs wiring)
+  - tests/test_knowledge.py, tests/test_sub_agent.py, tests/test_llm_callback.py
+
+### Phase 6, Sprint 2: Session Capture + Token Tracking (parallel)
+- **Status:** completed
+- **Started:** 2026-02-17
+- **Completed:** 2026-02-17
+- **Tests:** 350/353 passed (included in Sprint 1 count)
+- **Commit:** b704703 (same commit — both sprints landed together)
+- **Dispatch:** Agent Teams — 2 parallel agents (sprint2-capture, sprint2-tokens)
+- Actions taken:
+  - session-capture: standalone JSONL transcript indexer with tag stripping, message-boundary chunking, memvid direct ingestion
+  - token-tracking: _usage accumulator in LLMCallbackServer, per-run usage diffs, rlm_usage MCP tool with cost estimation
 - Files created:
-  - docs/plans/specs/thread-support-spec.md
-  - docs/plans/specs/deep-reasoning-spec.md
-  - docs/plans/specs/parallel-llm-spec.md
-  - docs/plans/specs/session-capture-spec.md
-  - docs/plans/specs/token-tracking-spec.md
-  - docs/plans/specs/programmatic-tools-spec.md
+  - scripts/session_capture.py (standalone capture script)
+  - tests/test_session_capture.py (44 tests)
+- Files modified:
+  - mcp_server/llm_callback.py (usage tracking)
+  - mcp_server/sub_agent.py (callback_server param, usage in result)
+  - mcp_server/tools.py (rlm_usage tool, callback_server wiring)
+  - tests/test_llm_callback.py, tests/test_sub_agent.py
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Phase 6 planned, 5 new specs created, ready for implementation |
-| Where am I going? | Sprint 1: thread-support, deep-reasoning, parallel-llm (parallel). Sprint 2: session-capture, token-tracking |
-| What's the goal? | Close gaps from Monolith comparison: session capture, phased reasoning, threads, parallel LLM, cost tracking |
-| What have I learned? | Monolith's append-only flat text degrades; our vector search is better. Their 3-phase prompt strategy and session auto-upload are worth adopting. |
-| What have I done? | 10 specs completed (phases 0-5), 5 new specs planned (phase 6). ~248 tests, 20 MCP tools. |
+| Where am I? | All 16 specs completed across phases 0-6. Project feature-complete. |
+| Where am I going? | No pending specs. Next steps: integration testing, documentation, real-world usage. |
+| What's the goal? | Docker sandbox for Python/DSPy code execution, exposed via MCP, with knowledge store, session capture, and token tracking. |
+| What have I learned? | Agent Teams dispatch works well for parallel specs with careful file partitioning. seal()→commit() matters for incremental indexing. |
+| What have I done? | 16 specs completed, 350 tests, ~22 MCP tools, 11 source modules + 1 standalone script. |
