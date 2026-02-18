@@ -302,3 +302,83 @@ def register_research_tools(mcp) -> None:
         if removed:
             return f"Cleared knowledge store at {path}"
         return f"No knowledge store found at {path} (already clean)"
+
+    @mcp.tool()
+    async def rlm_knowledge_audit(
+        ctx: Context,
+        reindex: bool = False,
+        topic: str | None = None,
+    ) -> str:
+        """List previously researched topics and optionally re-index them.
+
+        Without reindex, returns a list of topics found in the local docs
+        cache with file counts and sizes. With reindex=True, re-ingests
+        all local .md files into the knowledge store using the current
+        pipeline.
+
+        Args:
+            reindex: If True, re-ingest local docs into the store
+            topic: Limit to a specific topic (default: all)
+        """
+        docs_dir = Path(DOCS_BASE)
+        if not docs_dir.exists():
+            return f"No docs directory at {docs_dir}"
+
+        skip_dirs = {"plans", "ios-development", "visionos-development"}
+        topics: dict[str, dict] = {}
+        for lib_dir in sorted(docs_dir.iterdir()):
+            if not lib_dir.is_dir() or lib_dir.name.startswith("."):
+                continue
+            if lib_dir.name in skip_dirs:
+                continue
+            md_files = list(lib_dir.glob("**/*.md"))
+            if md_files:
+                total_bytes = sum(f.stat().st_size for f in md_files)
+                topics[lib_dir.name] = {
+                    "files": len(md_files),
+                    "size_kb": round(total_bytes / 1024, 1),
+                    "md_files": md_files,
+                }
+
+        if topic:
+            t = topic.lower()
+            if t not in topics:
+                return f"Topic '{t}' not found. Available: {', '.join(topics.keys())}"
+            topics = {t: topics[t]}
+
+        if not topics:
+            return "No researched topics found in docs cache."
+
+        if not reindex:
+            lines = [f"Researched topics ({len(topics)}):"]
+            for name, info in topics.items():
+                lines.append(f"  {name}: {info['files']} files, {info['size_kb']} KB")
+            lines.append("")
+            lines.append("Run with reindex=True to re-ingest into the knowledge store.")
+            return "\n".join(lines)
+
+        # Re-index: read local .md files and ingest
+        store = _get_store_from_ctx(ctx)
+        if store is None:
+            return "Knowledge store not available."
+
+        total = 0
+        results = []
+        for name, info in topics.items():
+            docs = []
+            for md_file in info["md_files"]:
+                text = md_file.read_text(encoding="utf-8", errors="replace")
+                if not text.strip():
+                    continue
+                docs.append({
+                    "title": md_file.stem,
+                    "label": name,
+                    "text": text,
+                })
+            if docs:
+                store.ingest_many(docs)
+                total += len(docs)
+                results.append(f"  {name}: {len(docs)} files re-indexed")
+
+        header = f"Re-indexed {total} files across {len(results)} topics:"
+        return header + "\n" + "\n".join(results)

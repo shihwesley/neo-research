@@ -13,6 +13,10 @@ Usage:
     knowledge search "query string" [--top-k 10]
     knowledge ask "question"
     knowledge status
+    knowledge audit                    # list previously researched topics
+    knowledge audit --reindex          # re-ingest local docs into store
+    knowledge audit --refetch          # re-fetch from source URLs
+    knowledge audit --topic fastapi    # limit to one topic
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ import json
 import logging
 import os
 import sys
+from pathlib import Path
 
 # Add project root to path so we can import mcp_server modules
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -180,6 +185,144 @@ def cmd_ask(args: argparse.Namespace) -> None:
     }))
 
 
+def cmd_audit(args: argparse.Namespace) -> None:
+    """Audit previously researched topics. Optionally re-index or re-fetch."""
+    from mcp_server.fetcher import DOCS_BASE, extract_library_name
+
+    docs_dir = Path(DOCS_BASE)
+    if not docs_dir.exists():
+        print(json.dumps({"error": f"Docs directory not found: {docs_dir}"}))
+        sys.exit(1)
+
+    # Discover topics: each subdirectory with .md files is a topic
+    topics: dict[str, dict] = {}
+    skip_dirs = {"plans", "ios-development", "visionos-development"}
+    for lib_dir in sorted(docs_dir.iterdir()):
+        if not lib_dir.is_dir() or lib_dir.name.startswith("."):
+            continue
+        if lib_dir.name in skip_dirs:
+            continue
+        md_files = list(lib_dir.glob("**/*.md"))
+        if md_files:
+            total_bytes = sum(f.stat().st_size for f in md_files)
+            topics[lib_dir.name] = {
+                "files": len(md_files),
+                "size_kb": round(total_bytes / 1024, 1),
+                "path": str(lib_dir),
+            }
+
+    if not topics:
+        print(json.dumps({"topics": [], "message": "No researched topics found"}))
+        return
+
+    # Filter to a specific topic if requested
+    if args.topic:
+        t = args.topic.lower()
+        if t not in topics:
+            print(json.dumps({"error": f"Topic '{t}' not found. Available: {list(topics.keys())}"}))
+            sys.exit(1)
+        topics = {t: topics[t]}
+
+    # List mode (default)
+    if not args.reindex and not args.refetch:
+        rows = []
+        for name, info in topics.items():
+            rows.append({
+                "topic": name,
+                "files": info["files"],
+                "size_kb": info["size_kb"],
+            })
+        print(json.dumps({"topics": rows, "count": len(rows)}, indent=2))
+        return
+
+    # Reindex mode: re-ingest existing local .md files into a fresh store
+    if args.reindex:
+        store, embedder = _open_store(args.project)
+
+        total_ingested = 0
+        results = []
+        for name, info in topics.items():
+            lib_dir = Path(info["path"])
+            md_files = sorted(lib_dir.glob("**/*.md"))
+            docs = []
+            for md_file in md_files:
+                text = md_file.read_text(encoding="utf-8", errors="replace")
+                if not text.strip():
+                    continue
+                docs.append({
+                    "title": md_file.stem,
+                    "label": name,
+                    "text": text,
+                    "metadata": {"source": str(md_file)},
+                })
+
+            if docs:
+                frame_ids = store.mem.put_many(docs, embedder=embedder)
+                total_ingested += len(docs)
+                results.append({
+                    "topic": name,
+                    "files": len(docs),
+                    "frames": len(frame_ids),
+                })
+
+        store.close()
+        print(json.dumps({
+            "action": "reindex",
+            "topics": len(results),
+            "total_files": total_ingested,
+            "results": results,
+        }, indent=2))
+        return
+
+    # Refetch mode: re-fetch from source URLs and re-index
+    if args.refetch:
+        import asyncio
+        from mcp_server.research import _resolve_doc_urls, KNOWN_DOCS
+        from mcp_server.fetcher import fetch_url
+
+        store, embedder = _open_store(args.project)
+
+        async def _refetch_all():
+            results = []
+            for name in topics:
+                urls = _resolve_doc_urls(name)
+                fetched = 0
+                failed = 0
+                for url in urls:
+                    try:
+                        result = await fetch_url(url, force=True)
+                        if result.get("content"):
+                            store.mem.put_many([{
+                                "title": url,
+                                "label": extract_library_name(url),
+                                "text": result["content"],
+                                "metadata": result.get("meta") or {},
+                            }], embedder=embedder)
+                            fetched += 1
+                            if not url.endswith("sitemap.xml"):
+                                break  # got content from direct URL
+                        else:
+                            failed += 1
+                    except Exception as exc:
+                        log.warning("Fetch failed for %s: %s", url, exc)
+                        failed += 1
+
+                results.append({
+                    "topic": name,
+                    "fetched": fetched,
+                    "failed": failed,
+                })
+            return results
+
+        results = asyncio.run(_refetch_all())
+        store.close()
+        print(json.dumps({
+            "action": "refetch",
+            "results": results,
+        }, indent=2))
+        return
+
+
 def cmd_status(args: argparse.Namespace) -> None:
     """Show knowledge store status."""
     h = args.project or _project_hash()
@@ -242,6 +385,17 @@ def main() -> None:
     p_status = sub.add_parser("status", help="Show store status")
     _add_project_arg(p_status)
     p_status.set_defaults(func=cmd_status)
+
+    # audit
+    p_audit = sub.add_parser("audit", help="Audit and re-process researched topics")
+    p_audit.add_argument("--reindex", action="store_true",
+                         help="Re-ingest local .md files into the knowledge store")
+    p_audit.add_argument("--refetch", action="store_true",
+                         help="Re-fetch from source URLs and re-index")
+    p_audit.add_argument("--topic", default=None,
+                         help="Limit to a single topic (default: all)")
+    _add_project_arg(p_audit)
+    p_audit.set_defaults(func=cmd_audit)
 
     args = parser.parse_args()
     args.func(args)

@@ -299,7 +299,7 @@ def register_apple_docs_tools(mcp) -> None:
                 f"You can also pass a custom path to docset_query.py directly."
             )
 
-        output_path = Path(f"/tmp/rlm-apple-{fw_lower}.md")
+        output_path = Path(f"/tmp/neo-apple-{fw_lower}.md")
 
         # Step 1: export
         rc, stdout, stderr = await _run_tool([
@@ -433,3 +433,91 @@ def register_apple_docs_tools(mcp) -> None:
             f"Ingested {library} docs "
             f"({len(content)} chars, {len(frame_ids)} frames)"
         )
+
+    @mcp.tool()
+    async def rlm_apple_lookup(
+        query: str,
+        ctx: Context,
+        framework: str | None = None,
+        top_k: int = 5,
+    ) -> str:
+        """Combined Apple docs lookup: DocSetQuery first, then knowledge store.
+
+        Checks the local Dash docset index for heading matches, then
+        searches the knowledge store (which may contain Context7 and
+        previously-exported Apple docs). Returns merged results from both.
+
+        Args:
+            query: Search term (e.g. "NavigationStack", "Entity Component")
+            framework: Optional framework filter (e.g. "swiftui", "realitykit")
+            top_k: Max results per source (default 5)
+        """
+        parts: list[str] = []
+        found_local = 0
+        found_store = 0
+
+        # --- Source 1: DocSetQuery local index ---
+        rc, stdout, stderr = await _run_tool([
+            str(TOOLS_DIR / "docindex.py"), "search", query,
+        ])
+        if rc == 0:
+            results = _parse_search_results(stdout)
+            if framework:
+                fw_lower = framework.lower()
+                results = [
+                    r for r in results
+                    if fw_lower in r["path"].lower() or fw_lower in r["title"].lower()
+                ]
+            found_local = len(results)
+            for hit in results[:top_k]:
+                file_path = DOCSET_QUERY_ROOT / hit["path"]
+                section = None
+                if hit["anchor"]:
+                    section = await asyncio.to_thread(
+                        _read_section, file_path, hit["anchor"]
+                    )
+                parts.append(f"### [docset] {hit['title']}: {hit['heading']}")
+                parts.append(f"_Source: {hit['path']}#{hit['anchor']}_")
+                if section:
+                    if len(section) > 2000:
+                        section = section[:2000] + "\n...(truncated)"
+                    parts.append(section)
+                else:
+                    parts.append("(section content not available)")
+                parts.append("")
+
+        # --- Source 2: Knowledge store (Context7 + indexed exports) ---
+        store = _get_store_from_ctx(ctx)
+        if store is not None:
+            try:
+                search_query = f"{framework} {query}" if framework else query
+                store_results = store.search(search_query, top_k=top_k)
+                found_store = len(store_results)
+                for sr in store_results:
+                    title = sr.get("title", "untitled")
+                    label = sr.get("label", "unknown")
+                    text = sr.get("text", "")
+                    if len(text) > 2000:
+                        text = text[:2000] + "\n...(truncated)"
+                    parts.append(f"### [knowledge:{label}] {title}")
+                    parts.append(text)
+                    parts.append("")
+            except Exception as exc:
+                log.warning("Knowledge store search failed: %s", exc)
+
+        if not parts:
+            hint = ""
+            if framework and framework.lower() in FRAMEWORK_PATHS:
+                hint = (
+                    f" Try rlm_apple_export('{framework}') to index "
+                    f"those docs first."
+                )
+            return f"No results for '{query}'.{hint}"
+
+        header = (
+            f"Found {found_local} docset + {found_store} knowledge store "
+            f"results for '{query}'"
+        )
+        if framework:
+            header += f" (framework: {framework})"
+        return header + "\n\n" + "\n".join(parts)

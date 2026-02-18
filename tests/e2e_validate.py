@@ -100,7 +100,7 @@ async def test_apple_export() -> bool:
         skip(f"docset_query.py not found at {TOOLS_DIR}")
         return False
 
-    output_path = Path("/tmp/rlm-e2e-swiftui.md")
+    output_path = Path("/tmp/neo-e2e-swiftui.md")
     output_path.unlink(missing_ok=True)
 
     # Export SwiftUI docs (depth=2 for speed)
