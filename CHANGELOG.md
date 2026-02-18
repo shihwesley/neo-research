@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.2.1 - 2026-02-18
+## 1.3.0 - 2026-02-18
+
+### Added
+- `research-sandbox` agent — token-efficient research via shell pipelines; fetched content never enters LLM context (5-10x cheaper than WebFetch approach). Uses markdown.new cascade for clean markdown, indexes via knowledge CLI, queries knowledge store for synthesis.
+- `research-specialist` agent — deep research with dual-path ingestion (MCP tools or CLI fallback). Indexes full page content into knowledge store for later querying.
 
 ### Fixed
 - `KnowledgeStore.open()` now passes `enable_vec=True, enable_lex=True` to `memvid_sdk.use()` so hybrid search works on reopened stores, not just newly created ones
