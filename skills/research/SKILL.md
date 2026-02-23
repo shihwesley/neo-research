@@ -54,9 +54,10 @@ You are the research-agent. Follow the pipeline in agents/research-agent.md exac
 $ARGUMENTS
 
 ## Instructions
-Run all 5 phases:
-1. Parse input → build question tree
-2. Discover sources (WebSearch per branch)
+Run all 6 phases (Phase 0 is new and critical):
+0. Search existing knowledge stores FIRST (~/.neo-research/knowledge/*.mv2)
+1. Parse input → build question tree, annotate branches as [COVERED]/[PARTIAL]/[MISSING]
+2. Discover sources (WebSearch) ONLY for [PARTIAL] and [MISSING] branches
 3. Fetch → disk → index into .mv2 (zero context cost)
 4. Distill: query .mv2 systematically → write expertise.md
 5. Report results
@@ -67,7 +68,16 @@ Return the expertise.md content and a summary report when done.
 ## MCP Tools Available
 Use ToolSearch to load: rlm_search, rlm_ask, rlm_ingest, rlm_exec, rlm_knowledge_status
 
+## BM25 Query Rules (CRITICAL)
+The .mv2 stores use Tantivy BM25. Multi-word queries silently return 0 hits
+because Tantivy treats them as boolean AND. Use SINGLE KEYWORDS or OR-joined terms:
+  - GOOD: mem.find("MeshResource", k=5)
+  - GOOD: mem.find("MeshResource OR generateSphere OR texture", k=5)
+  - BAD:  mem.find("MeshResource generateSphere texture", k=5) → 0 results
+  - BAD:  mem.find("how to create a sphere mesh?", k=5) → 0 results
+
 ## Rules
+- Search existing knowledge stores before any web research.
 - Never read fetched content. Files go disk → knowledge store.
 - Never use WebFetch. Use curl via Bash for fetching, WebSearch for discovery.
 - Question tree before searching. Structure first.

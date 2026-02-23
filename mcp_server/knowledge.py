@@ -22,6 +22,40 @@ KNOWLEDGE_DIR = os.path.expanduser("~/.neo-research/knowledge")
 DEFAULT_MIN_RELEVANCY = 0.35
 DEFAULT_ADAPTIVE_MAX_K = 30
 
+# Stop words that cause zero-match clauses in Tantivy's BM25 parser.
+# Tantivy treats multi-word queries as boolean AND — if any term matches
+# nothing (common with stop words), the entire query returns 0 results.
+_STOP_WORDS = frozenset({
+    "how", "does", "what", "is", "and", "the", "a", "an", "to", "for",
+    "with", "are", "it", "of", "in", "on", "by", "do", "i", "my", "can",
+    "this", "that", "which", "when", "where", "who", "why", "from", "or",
+})
+
+
+def _preprocess_lex_query(query: str) -> str:
+    """Convert multi-word queries to OR-joined terms for Tantivy BM25.
+
+    Tantivy's default query parser uses boolean AND for multi-word input.
+    This silently returns 0 results when any term is missing from a doc.
+    We strip stop words and join remaining terms with OR for broader recall.
+
+    Single-word queries and queries already containing OR/AND are passed through.
+    """
+    stripped = query.strip()
+    # Already has explicit boolean operators — respect user intent
+    if " OR " in stripped or " AND " in stripped:
+        return stripped
+    # Single word — no transformation needed
+    words = stripped.split()
+    if len(words) <= 1:
+        return stripped
+    # Strip stop words, join with OR
+    filtered = [w for w in words if w.lower().rstrip("?.,!") not in _STOP_WORDS]
+    if not filtered:
+        # All stop words — fall back to original minus punctuation
+        filtered = [w.rstrip("?.,!") for w in words if w.rstrip("?.,!")]
+    return " OR ".join(filtered) if len(filtered) > 1 else (filtered[0] if filtered else stripped)
+
 
 def _project_hash(project_path: str | None = None) -> str:
     """Deterministic hash from the project path (or cwd)."""
@@ -144,6 +178,13 @@ class KnowledgeStore:
         """
         self._ensure_open()
 
+        # Preprocess query for BM25 mode to avoid silent zero-result failures
+        effective_query = query
+        if mode in ("lex", "auto"):
+            effective_query = _preprocess_lex_query(query)
+            if effective_query != query:
+                log.debug("BM25 query rewritten: %r → %r", query, effective_query)
+
         kwargs: dict[str, Any] = {
             "mode": mode,
             "embedder": self.embedder,
@@ -157,7 +198,7 @@ class KnowledgeStore:
         else:
             kwargs["k"] = top_k
 
-        results = self.mem.find(query, **kwargs)
+        results = self.mem.find(effective_query, **kwargs)
         # Post-filter by thread before trimming
         if "hits" in results and thread is not None:
             results["hits"] = [

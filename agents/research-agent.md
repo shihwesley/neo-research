@@ -34,6 +34,73 @@ Generated artifacts (when applicable):
 
 Resolve `~` to the absolute home directory path before using any file tools.
 
+## Phase 0: Search Existing Knowledge Stores
+
+Before any web research, check for pre-indexed knowledge at two locations:
+
+1. **Global stores:** `~/.neo-research/knowledge/*.mv2` — curated Apple docs, domain knowledge
+2. **Per-topic stores:** `~/.claude/research/*/knowledge.mv2` — previous research sessions
+
+### Step 0a: Inventory available stores
+
+```bash
+HOME_DIR=$(echo ~)
+ls -lh "$HOME_DIR/.neo-research/knowledge/"*.mv2 2>/dev/null
+ls -lh "$HOME_DIR/.claude/research/"*/knowledge.mv2 2>/dev/null
+```
+
+### Step 0b: Identify relevant stores
+
+Match store names to the research topic. Common stores:
+- `apple-spatial-computing.mv2` — RealityKit, ARKit, SceneKit, ShaderGraph
+- `apple-swiftui.mv2` — SwiftUI, Observation, ImmersiveSpace
+- `apple-media-audio.mv2` — AVFoundation, spatial audio
+- `apple-graphics.mv2` — Metal, ShaderGraph, CoreImage
+- `visionos-development.mv2` — visionOS concepts and patterns
+- `aviation-geospatial.mv2` — flight data, geospatial APIs
+
+If the user's input explicitly names stores to search, always use those.
+
+### Step 0c: Query existing stores
+
+Use memvid_sdk via Python (the neo-research venv has it installed):
+
+```python
+# IMPORTANT: BM25 (lex) search requires single-keyword queries.
+# Multi-word queries fail silently (0 results) because Tantivy's
+# parser treats them as boolean AND across all terms.
+#
+# Pattern: one query per API type/concept name, not natural language.
+
+import memvid_sdk
+mem = memvid_sdk.use("basic", "<store_path>")
+result = mem.find("<SingleKeyword>", k=5, snippet_chars=600)
+# result is a dict: {"hits": [{"title": "...", "snippet": "..."}, ...]}
+```
+
+**Query strategy for BM25 stores:**
+- Use API type names as keywords: `"MeshResource"`, `"ShaderGraphMaterial"`, `"SpatialAudioComponent"`
+- One keyword per query — never combine terms
+- Run 5-10 single-keyword queries per relevant store
+- If a store has vec embeddings enabled (check with `mem.info()`), use `mode="sem"` or `mode="auto"` with an embedder for natural language queries
+
+### Step 0d: Extract and save
+
+Write extracted snippets to `~/.claude/research/<slug>/knowledge-store-extracts.md`.
+
+Treat these as **Tier 0 sources** — above even official docs, because they're already curated and indexed. If existing stores cover a question tree branch well, mark that branch as "covered by existing knowledge" and skip web discovery for it in Phase 2.
+
+### Step 0e: Update question tree
+
+After Phase 1 generates the question tree, annotate each branch:
+- `[COVERED]` — existing stores have sufficient content
+- `[PARTIAL]` — some content found, supplement with web
+- `[MISSING]` — no existing store content, full web discovery needed
+
+Only run Phase 2 (Source Discovery) for `[PARTIAL]` and `[MISSING]` branches.
+
+---
+
 ## Phase 1: Parse Input & Build Question Tree
 
 Your input could be anything:
@@ -316,30 +383,60 @@ For each question tree branch, run 1-2 queries:
 rlm_search(query="<branch question>", project="$SLUG", top_k=5, label="<branch>")
 ```
 
-Or via rlm_exec if you want to run programmatic queries:
+Or via rlm_exec / direct Python if you want to run programmatic queries:
 ```python
-rlm_exec("""
-from memvid_sdk import use
+import memvid_sdk
 import json
 
-mem = use("basic", "$HOME/.claude/research/$SLUG/knowledge.mv2",
-          enable_vec=True, enable_lex=True)
+HOME = "/Users/quartershots"  # resolve ~ first
+mem = memvid_sdk.use("basic", f"{HOME}/.claude/research/{SLUG}/knowledge.mv2")
 
-branches = [
-    "what problem does <topic> solve",
-    "core architecture of <topic>",
-    "key APIs and types in <topic>",
-    # ... one per branch
-]
+# CRITICAL: BM25 query preprocessing
+# Tantivy's BM25 parser treats multi-word queries as boolean AND.
+# "MeshResource generateSphere texture" requires ALL three terms in one doc.
+# Most queries return 0 hits this way.
+#
+# Two strategies that work:
+#
+# 1. Single-keyword queries (reliable, simple):
+keywords = ["MeshResource", "ShaderGraphMaterial", "SpatialAudioComponent"]
+for kw in keywords:
+    result = mem.find(kw, k=5, snippet_chars=600)
+    # Process hits...
+#
+# 2. OR-joined queries (broader recall):
+def lex_query(terms: list[str]) -> str:
+    """Join terms with OR for Tantivy — matches docs containing ANY term."""
+    # Strip common stop words that cause zero-match clauses
+    STOPS = {"how", "does", "what", "is", "and", "the", "a", "an",
+             "to", "for", "with", "are", "it", "of", "in", "on", "by"}
+    filtered = [t for t in terms if t.lower() not in STOPS]
+    return " OR ".join(filtered)
+
+query = lex_query(["MeshResource", "generateSphere", "texture", "sphere"])
+result = mem.find(query, k=5, snippet_chars=600)
+#
+# 3. If the store has vec embeddings + Ollama is running:
+# from memvid_sdk.embeddings import OllamaEmbeddings
+# embedder = OllamaEmbeddings(model="nomic-embed-text")
+# result = mem.find("how to create a textured sphere", k=5, mode="sem", embedder=embedder)
 
 results = {}
-for q in branches:
-    hits = mem.search(q, top_k=5)
-    results[q] = [{"text": h.text[:500], "score": h.score} for h in hits]
+for branch_name, branch_keywords in branch_queries.items():
+    query = lex_query(branch_keywords)
+    hits = mem.find(query, k=5, snippet_chars=500)
+    hit_list = hits.get("hits", []) if isinstance(hits, dict) else []
+    results[branch_name] = [
+        {"title": h.get("title", ""), "snippet": h.get("snippet", "")[:500]}
+        for h in hit_list
+    ]
 
 print(json.dumps(results, indent=2))
-""")
 ```
+
+**Do not use natural language questions as BM25 queries.** Break questions into keyword lists:
+- "How to generate a sphere mesh?" → `["MeshResource", "generateSphere", "sphere"]`
+- "What is the spatial audio component API?" → `["SpatialAudioComponent", "gain", "directLevel"]`
 
 Read the returned excerpts. This is the only point where indexed content enters your context — as targeted, relevant snippets.
 
