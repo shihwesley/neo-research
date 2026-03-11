@@ -1,6 +1,6 @@
 ---
 name: apple-research
-description: "Research Apple frameworks against a spec/plan file using exported Dash docset docs. Produces a per-feature reference artifact with verbatim code examples from official guides and samples."
+description: "Research Apple frameworks against a spec or plan file using exported Dash docset documentation. Produces per-feature reference sections with verbatim code examples and API signatures. Use when user says /apple-research, needs to look up Apple framework APIs before implementation, or wants to generate framework reference docs from a spec file."
 user-invocable: true
 ---
 
